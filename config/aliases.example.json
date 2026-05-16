@@ -1,0 +1,24 @@
+{
+    "$schema_description": "Template for config/aliases.json — copy this file to config/aliases.json and replace the example entries with your real data. The actual config/aliases.json is gitignored so personal data does not leak. Match rule: pairs are resolved by (author_name, author_email) lookup, not by primary-key id — safe across `bin/import.php --fresh`. In equivalent_domains the FIRST domain of each group is the preferred canonical domain when picking the surviving record.",
+
+    "pairs": [
+        {
+            "alias_name":  "jsmith",
+            "alias_email": "jane.smith@example.com",
+            "canon_name":  "Jane Smith",
+            "canon_email": "jane.smith@example.com",
+            "note":        "same email, login vs full name"
+        },
+        {
+            "alias_name":  "Sam Johnson",
+            "alias_email": "sjohnson@example.org",
+            "canon_name":  "Sam Johnson",
+            "canon_email": "sjohnson@example.com",
+            "note":        "same name, different domain"
+        }
+    ],
+
+    "equivalent_domains": [
+        ["some-domain.com", "some-domain.ua"]
+    ]
+}
