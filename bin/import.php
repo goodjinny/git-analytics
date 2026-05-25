@@ -49,14 +49,7 @@ foreach ([
     require_once $baseDir . '/src/' . $class . '.php';
 }
 
-// Load configuration
-Config::load($baseDir . '/config/config.php');
-
-// Init logger (before any output)
-$outputPath = (string) Config::get('output.path', $baseDir . '/output');
-Logger::init($outputPath);
-
-// ---- Parse CLI arguments ----
+// ---- Parse CLI arguments (before loading config so --help works without config) ----
 
 $opts = getopt('', [
     'branch:',
@@ -142,12 +135,40 @@ function runRequirementsCheck(bool $verbose): bool
     return $passed;
 }
 
-$checkOnly = isset($opts['check-requirements']);
+$configPath = $baseDir . '/config/config.php';
 
-if ($checkOnly) {
+// --check-requirements: load config if present so that db/output/repo checks have values.
+// If config is missing the requirements checker will report it as FAIL — that is correct.
+if (isset($opts['check-requirements'])) {
+    if (file_exists($configPath)) {
+        Config::load($configPath);
+    }
+    $outputPath = (string) Config::get('output.path', $baseDir . '/output');
+    Logger::init($outputPath);
+
     $passed = runRequirementsCheck(verbose: true);
     exit($passed ? 0 : 1);
 }
+
+// ---- Ensure config file exists (required for all other operations) ----
+
+if (!file_exists($configPath)) {
+    $examplePath = $baseDir . '/config/config.example.php';
+    echo '[ERROR] Configuration file not found: config/config.php' . PHP_EOL;
+    echo PHP_EOL;
+    echo 'To get started, copy the example configuration:' . PHP_EOL;
+    echo '  cp ' . $examplePath . ' ' . $configPath . PHP_EOL;
+    echo PHP_EOL;
+    echo 'Then edit config/config.php and update git.repo_path to your actual repository path.' . PHP_EOL;
+    exit(1);
+}
+
+// Load configuration
+Config::load($configPath);
+
+// Init logger (after config is loaded)
+$outputPath = (string) Config::get('output.path', $baseDir . '/output');
+Logger::init($outputPath);
 
 // Auto-check on every run — abort if requirements are not met.
 $passed = runRequirementsCheck(verbose: false);
@@ -203,6 +224,10 @@ $fresh    = isset($opts['fresh']);
 
 if (!is_dir($repoPath)) {
     Logger::error("Repository path does not exist: {$repoPath}");
+    if ($repoPath === '/path/to/repo') {
+        Logger::error('This appears to be the default placeholder value from config.example.php.');
+        Logger::error('Please update git.repo_path in config/config.php to your actual repository path.');
+    }
     exit(1);
 }
 
@@ -285,4 +310,3 @@ try {
     Logger::error('Fatal: ' . $e->getMessage());
     exit(1);
 }
-

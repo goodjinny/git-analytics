@@ -26,10 +26,7 @@ foreach (['Config', 'Db', 'Logger', 'AliasApplier'] as $class) {
     require_once $baseDir . '/src/' . $class . '.php';
 }
 
-Config::load($baseDir . '/config/config.php');
-$outputPath = (string) Config::get('output.path', $baseDir . '/output');
-Logger::init($outputPath);
-
+// Parse args before loading config so --help works without config
 $opts   = getopt('', ['dry-run', 'help']);
 $dryRun = isset($opts['dry-run']);
 
@@ -54,6 +51,24 @@ optional and useful mainly for --dry-run inspection.
 HELP;
     exit(0);
 }
+
+// ---- Ensure config exists (required for all operations except --help) ----
+
+$configPath = $baseDir . '/config/config.php';
+if (!file_exists($configPath)) {
+    $examplePath = $baseDir . '/config/config.example.php';
+    echo '[ERROR] Configuration file not found: config/config.php' . PHP_EOL;
+    echo PHP_EOL;
+    echo 'To get started, copy the example configuration:' . PHP_EOL;
+    echo '  cp ' . $examplePath . ' ' . $configPath . PHP_EOL;
+    echo PHP_EOL;
+    echo 'Then edit config/config.php and update git.repo_path to your repository path.' . PHP_EOL;
+    exit(1);
+}
+
+Config::load($configPath);
+$outputPath = (string) Config::get('output.path', $baseDir . '/output');
+Logger::init($outputPath);
 
 Logger::info('apply-aliases started' . ($dryRun ? ' [DRY-RUN]' : ''));
 
