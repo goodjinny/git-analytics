@@ -24,7 +24,7 @@ final class ReportRunner
      * @param array{
      *     branch:string, date_from:string, date_to:string,
      *     report:string, force:bool, apply_aliases?:bool,
-     *     alias?:?string, detail?:bool, make_charts?:bool
+     *     alias?:?string, detail?:bool, make_charts?:bool, with_reverts?:bool
      * } $opts
      */
     public function run(array $opts): void
@@ -38,6 +38,7 @@ final class ReportRunner
         $alias        = isset($opts['alias']) && $opts['alias'] !== '' ? (string) $opts['alias'] : null;
         $detail       = (bool) ($opts['detail'] ?? false);
         $makeCharts   = (bool) ($opts['make_charts'] ?? false);
+        $withReverts  = (bool) ($opts['with_reverts'] ?? false);
 
         $this->ensureDbReady($applyAliases);
         $this->ensureDataExists($branch, $from, $to);
@@ -47,7 +48,7 @@ final class ReportRunner
             throw new RuntimeException("Cannot create reports directory: {$outDir}");
         }
 
-        $keys             = $this->resolveReports($reportKey);
+        $keys             = $this->resolveReports($reportKey, $withReverts);
         $needsCombined    = in_array($reportKey, [ReportDefinitions::FULL, ReportDefinitions::ALL], true);
         $renderedSections = [];
 
@@ -216,10 +217,10 @@ final class ReportRunner
     }
 
     /** @return string[] List of individual report keys to generate. */
-    private function resolveReports(string $key): array
+    private function resolveReports(string $key, bool $withReverts = false): array
     {
         if ($key === ReportDefinitions::FULL || $key === ReportDefinitions::ALL) {
-            return ReportDefinitions::allKeys();
+            return $withReverts ? ReportDefinitions::allKeys() : ReportDefinitions::defaultKeys();
         }
         return [$key];
     }

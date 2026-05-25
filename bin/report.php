@@ -55,6 +55,7 @@ $opts = getopt('', [
     'report::',
     'alias::',
     'detail',
+    'with-reverts-report',
     'make-charts',
     'force',
     'skip-aliases',
@@ -73,7 +74,7 @@ if (isset($opts['help'])) {
     $reportLines[] = sprintf(
         "    %-{$keyWidth}s   %s",
         ReportDefinitions::FULL,
-        '(default) Combined report — all sections below in one file'
+        '(default) Combined report — commits-* and lines-* sections in one file'
     );
     $reportLines[] = sprintf(
         "    %-{$keyWidth}s   %s",
@@ -114,14 +115,18 @@ Required:
 
 Optional:
   --report=<key>         Which report to generate. Default: full-report
-  --alias=<value>        Filter reverts-* reports by a developer. Match against
-                         email local-part, full email, author_name, or display.
-                         Example: --alias=jane.smith
-                         (ignored for non-reverts reports)
-  --detail               Append a per-developer list of individual revert
-                         commits (date, hash, ticket, subject) to reverts-*
-                         reports. Combine with --alias to focus on one dev.
-  --make-charts          Also generate an interactive HTML dashboard
+   --alias=<value>        Filter reverts-* reports by a developer. Match against
+                          email local-part, full email, author_name, or display.
+                          Example: --alias=jane.smith
+                          (ignored for non-reverts reports)
+   --detail               Append a per-developer list of individual revert
+                          commits (date, hash, ticket, subject) to reverts-*
+                          reports. Combine with --alias to focus on one dev.
+   --with-reverts-report  Include reverts-* sections when generating full-report
+                          or all. By default these sections are omitted.
+                          (Has no effect when --report=reverts-* is specified
+                          directly — those are always generated.)
+   --make-charts          Also generate an interactive HTML dashboard
                          (Chart.js) at reports/<period>/diagrams/index.html
   --force                Overwrite existing .md files without warning
   --skip-aliases         Do NOT run AliasApplier before generating reports
@@ -153,6 +158,7 @@ Examples:
   php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
   php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --report=commits-full-period
   php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --report=all --force
+  php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --report=all --with-reverts-report --force
   php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \\
       --report=reverts-by-month --detail --alias=jsmith
 
@@ -236,12 +242,14 @@ $skipAliases  = isset($opts['skip-aliases']);
 $alias        = isset($opts['alias']) && $opts['alias'] !== '' ? trim((string) $opts['alias']) : null;
 $detail       = isset($opts['detail']);
 $makeCharts   = isset($opts['make-charts']);
+$withReverts  = isset($opts['with-reverts-report']);
 
 // --alias / --detail apply only to reverts-* reports. When the user picks a
 // non-reverts single report, warn that the flags will be ignored there.
 $reportsRevertsOnly = ($alias !== null || $detail);
+$isFullOrAll        = in_array($reportKey, [ReportDefinitions::FULL, ReportDefinitions::ALL], true);
 $selectedIsReverts  = str_starts_with($reportKey, 'reverts-')
-    || in_array($reportKey, [ReportDefinitions::FULL, ReportDefinitions::ALL], true);
+    || ($isFullOrAll && $withReverts);
 if ($reportsRevertsOnly && !$selectedIsReverts) {
     Logger::warning(sprintf(
         '--alias/--detail apply only to reverts-* reports. Ignored for --report=%s.',
@@ -279,6 +287,7 @@ try {
         'alias'         => $alias,
         'detail'        => $detail,
         'make_charts'   => $makeCharts,
+        'with_reverts'  => $withReverts,
     ]);
 
     exit(0);

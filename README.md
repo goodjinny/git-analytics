@@ -17,7 +17,7 @@ Standalone CLI-інструмент для збору, обробки та зв�
 2. **Нормалізація аліасів розробників**:
    - manual mapping (з [config/aliases.json](config/aliases.json) — gitignored; шаблон у [config/aliases.example.json](config/aliases.example.json))
    - auto-discovery через еквівалентні домени (`some-domain.com` === `some-domain.ua`)
-3. **Звіти у markdown** (10 типів) у `reports/dd.mm.YYYY-dd.mm.YYYY/<key>.md` із вбудованими **Mermaid**-діаграмами, що рендеряться нативно в GitHub/GitLab.
+3. **Звіти у markdown** у `reports/dd.mm.YYYY-dd.mm.YYYY/<key>.md` із вбудованими **Mermaid**-діаграмами, що рендеряться нативно в GitHub/GitLab. За замовчуванням генеруються звіти `commits-*` і `lines-*`; звіти `reverts-*` ввімкнено окремим прапором `--with-reverts-report` або явним `--report=reverts-*`.
 4. **Інтерактивний HTML-дашборд** (Chart.js) у `reports/<period>/diagrams/index.html` — генерується за прапором `--make-charts`.
 
 ---
@@ -120,7 +120,7 @@ path-to-project/git-analytics/
 │       ├── reverts-full-period.md
 │       ├── reverts-by-year.md
 │       ├── reverts-by-month.md
-│       ├── full-report.md              # комбінований звіт
+│       ├── full-report.md              # комбінований звіт (commits-* + lines-*; з --with-reverts-report також reverts-*)
 │       └── diagrams/                   # створюється з --make-charts
 │           └── index.html              # інтерактивний Chart.js дашборд
 ├── config/
@@ -276,6 +276,7 @@ php bin/report.php \
 | `--report=<key>` | optional | Який звіт згенерувати (default: `full-report`) |
 | `--alias=<value>` | optional | Фільтр **тільки для `reverts-*`** — за email/local-part/підрядком імені |
 | `--detail` | flag | Дописати в `reverts-*` список окремих revert-комітів |
+| `--with-reverts-report` | flag | Включити секції `reverts-*` при генерації `full-report` або `all`. За замовчуванням ці секції пропускаються.<br>Не впливає на `--report=reverts-*` — ті завжди генеруються. |
 | `--make-charts` | flag | Згенерувати HTML-дашборд з Chart.js у `diagrams/` |
 | `--skip-aliases` | flag | НЕ запускати `AliasApplier` перед генерацією |
 | `--force` | flag | Перезаписувати існуючі `.md` без попередження |
@@ -285,8 +286,8 @@ php bin/report.php \
 
 | Ключ | Опис |
 |------|------|
-| `full-report` | (default) Комбінований звіт з усіма секціями |
-| `all` | Те саме, плюс кожна секція окремим файлом |
+| `full-report` | (default) Комбінований звіт — `commits-*` і `lines-*` секції в одному файлі. Додати `--with-reverts-report`, щоб включити також `reverts-*`. |
+| `all` | Те саме, плюс кожна секція окремим файлом. Reverts-секції також лише з `--with-reverts-report`. |
 | `commits-full-period` | Кількість комітів по розробникам за період |
 | `commits-by-year` | Те саме за роками (pivot) |
 | `commits-by-month` | Те саме за місяцями (pivot) |
@@ -358,16 +359,28 @@ reports/dd.mm.YYYY-dd.mm.YYYY/exports/
 ## Приклади
 
 ```bash
-# Повний звіт за весь період
+# Повний звіт за весь період (тільки commits-* і lines-*)
 php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
+
+# Повний звіт із включеними reverts-*
+php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+    --with-reverts-report
 
 # Окремий звіт із перезаписом
 php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
     --report=commits-full-period --force
 
-# Усі 9 звітів окремими файлами + комбінований
+# Усі commits-* і lines-* окремими файлами + комбінований
 php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
     --report=all --force
+
+# Усі 9 звітів окремими файлами + комбінований (включаючи reverts-*)
+php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+    --report=all --with-reverts-report --force
+
+# Звіт по відкатах — генерується напряму без --with-reverts-report
+php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+    --report=reverts-full-period
 
 # Reverts конкретного розробника з деталями
 php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
@@ -437,7 +450,7 @@ xychart-beta
 
 ### 2. Chart.js HTML-дашборд (за `--make-charts`)
 
-Створюється один self-contained файл `reports/<period>/diagrams/index.html` з усіма 9 звітами у вигляді інтерактивних графіків (zoom, tooltip, hover).
+Створюється один self-contained файл `reports/<period>/diagrams/index.html` з усіма згенерованими звітами у вигляді інтерактивних графіків (zoom, tooltip, hover). Кількість секцій відповідає набору згенерованих звітів: 6 (без reverts) або 9 (з `--with-reverts-report`).
 
 **Структура HTML:**
 
@@ -445,7 +458,7 @@ xychart-beta
 ╭─────────────────────────────────────────────────╮
 │  Header: branch, period, alias filter, time     │
 ├─────────────────────────────────────────────────┤
-│  Navigation (anchors to all 9 sections)         │
+│  Navigation (anchors to generated sections)     │
 ├─────────────────────────────────────────────────┤
 │  Section: commits-full-period                   │
 │    Horizontal bar chart, top-10                 │
@@ -453,7 +466,8 @@ xychart-beta
 │  Section: commits-by-year                       │
 │    Multi-line chart, top-10 devs × periods      │
 ├─────────────────────────────────────────────────┤
-│  ... 7 more sections ...                        │
+│  ... more sections (incl. reverts-* if          │
+│      --with-reverts-report was passed) ...      │
 ╰─────────────────────────────────────────────────╯
 ```
 
@@ -468,7 +482,11 @@ xychart-beta
 ```bash
 php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
     --make-charts --force
-# → reports/01.12.2025-31.12.2025/diagrams/index.html
+# → reports/01.12.2025-31.12.2025/diagrams/index.html  (6 графіків: commits-* + lines-*)
+
+php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+    --with-reverts-report --make-charts --force
+# → reports/01.12.2025-31.12.2025/diagrams/index.html  (9 графіків: commits-* + lines-* + reverts-*)
 ```
 
 **Customization:** [`HtmlDashboardBuilder`](src/HtmlDashboardBuilder.php):
@@ -494,7 +512,7 @@ php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 
 1. Коміт із заголовком `Revert "..."` позначається `is_revert_commit = 1`.
 2. З повідомлення витягуються:
    - назва відкоченої гілки (`Merge branch 'X' into 'develop'`)
-   - тікет (`RFC-NNNNN`)
+   - тікет (наприклад `RFC-NNNNN`)
 3. Резолюція **affected_developer** (постраждалий):
    - **`branch_author`** — за git log знайти першого автора, що створив branch
    - **`ticket_commit_author`** — автор оригінального коміту з тим самим тікетом
