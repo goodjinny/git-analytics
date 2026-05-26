@@ -33,6 +33,7 @@ $baseDir = dirname(__DIR__);
 
 foreach ([
     'Config', 'Db', 'Logger',
+    'ProjectResolver',
     'AliasApplier',
     'ReportDefinitions',
     'ReportRepository',
@@ -52,6 +53,7 @@ $opts = getopt('', [
     'branch:',
     'date-from:',
     'date-to:',
+    'project::',
     'report::',
     'alias::',
     'detail',
@@ -114,6 +116,8 @@ Required:
   --date-to=<date>       Period end,   YYYY-MM-DD (inclusive)
 
 Optional:
+  --project=<name>       Project key from the 'projects' map in config/config.php
+                         (default: first project in the map)
   --report=<key>         Which report to generate. Default: full-report
    --alias=<value>        Filter reverts-* reports by a developer. Match against
                           email local-part, full email, author_name, or display.
@@ -176,7 +180,7 @@ if (!file_exists($configPath)) {
     echo 'To get started, copy the example configuration:' . PHP_EOL;
     echo '  cp ' . $examplePath . ' ' . $configPath . PHP_EOL;
     echo PHP_EOL;
-    echo 'Then edit config/config.php and update git.repo_path to your repository path.' . PHP_EOL;
+    echo 'Then edit config/config.php and set up the git-projects map with your repository paths.' . PHP_EOL;
     exit(1);
 }
 
@@ -184,6 +188,18 @@ Config::load($configPath);
 
 $outputPath = (string) Config::get('output.path', $baseDir . '/output');
 Logger::init($outputPath);
+
+// ---- Resolve project ----
+
+$projectArg = isset($opts['project']) && $opts['project'] !== '' ? (string) $opts['project'] : null;
+try {
+    $project     = ProjectResolver::resolve($projectArg);
+    $projectName = $project['name'];
+} catch (InvalidArgumentException $e) {
+    echo '[ERROR] ' . $e->getMessage() . PHP_EOL;
+    echo PHP_EOL . 'Run with --help for usage.' . PHP_EOL;
+    exit(1);
+}
 
 // ----------------------------------------------------------------------
 // Validate
@@ -264,7 +280,7 @@ if ($reportsRevertsOnly && !$selectedIsReverts) {
 // ----------------------------------------------------------------------
 
 Logger::info('Report generation started');
-Logger::info("Branch: {$branch} | Period: {$dateFrom} – {$dateTo} | Report: {$reportKey}");
+Logger::info("Project: {$projectName} | Branch: {$branch} | Period: {$dateFrom} – {$dateTo} | Report: {$reportKey}");
 
 $reportsRoot = $baseDir . '/reports';
 
@@ -288,6 +304,7 @@ try {
         'detail'        => $detail,
         'make_charts'   => $makeCharts,
         'with_reverts'  => $withReverts,
+        'project_name'  => $projectName,
     ]);
 
     exit(0);

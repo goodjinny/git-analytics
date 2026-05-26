@@ -29,6 +29,7 @@ $baseDir = dirname(__DIR__);
 
 foreach ([
     'Config', 'Db', 'Logger',
+    'ProjectResolver',
     'AliasApplier',
     'ReportDefinitions',
     'ReportRepository',
@@ -48,6 +49,7 @@ $opts = getopt('', [
     'branch:',
     'date-from:',
     'date-to:',
+    'project::',
     'report::',
     'format::',
     'alias::',
@@ -88,6 +90,8 @@ Required:
   --date-to=<date>       Period end,   YYYY-MM-DD (inclusive)
 
 Optional:
+  --project=<name>       Project key from the 'projects' map in config/config.php
+                         (default: first project in the map)
   --report=<key>         Which report to export. Default: all
   --format=<fmt>         csv | xlsx | both. Default: both
   --alias=<value>        Filter reverts-* exports by a developer (same matching
@@ -136,13 +140,25 @@ if (!file_exists($configPath)) {
     echo 'To get started, copy the example configuration:' . PHP_EOL;
     echo '  cp ' . $examplePath . ' ' . $configPath . PHP_EOL;
     echo PHP_EOL;
-    echo 'Then edit config/config.php and update git.repo_path to your repository path.' . PHP_EOL;
+    echo 'Then edit config/config.php and set up the git-projects map with your repository paths.' . PHP_EOL;
     exit(1);
 }
 
 Config::load($configPath);
 $outputPath = (string) Config::get('output.path', $baseDir . '/output');
 Logger::init($outputPath);
+
+// ---- Resolve project ----
+
+$projectArg = isset($opts['project']) && $opts['project'] !== '' ? (string) $opts['project'] : null;
+try {
+    $project     = ProjectResolver::resolve($projectArg);
+    $projectName = $project['name'];
+} catch (InvalidArgumentException $e) {
+    echo '[ERROR] ' . $e->getMessage() . PHP_EOL;
+    echo PHP_EOL . 'Run with --help for usage.' . PHP_EOL;
+    exit(1);
+}
 
 // ----------------------------------------------------------------------
 // Validate
@@ -226,7 +242,7 @@ if (($alias !== null || $detail) && !$selectedIsReverts) {
 // ----------------------------------------------------------------------
 
 Logger::info('Export started');
-Logger::info("Branch: {$branch} | Period: {$dateFrom} – {$dateTo} | Report: {$reportKey} | Format: {$format}");
+Logger::info("Project: {$projectName} | Branch: {$branch} | Period: {$dateFrom} – {$dateTo} | Report: {$reportKey} | Format: {$format}");
 
 $reportsRoot = $baseDir . '/reports';
 
@@ -247,6 +263,7 @@ try {
         'apply_aliases' => !$skipAliases,
         'alias'         => $alias,
         'detail'        => $detail,
+        'project_name'  => $projectName,
     ]);
 
     exit(0);

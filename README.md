@@ -158,17 +158,24 @@ php path-to-project/git-analytics/bin/import.php --check-requirements
 
 ```php
 return [
-    'db'     => ['path'      => dirname(__DIR__) . '/data/git_analytics.db'],
-    'git'    => ['repo_path' => '/path/to/your-project'],
-    'output' => ['path'      => dirname(__DIR__) . '/output'],
-    // Optional: override project subfolder in reports/. Default: basename of git.repo_path.
-    // 'reports' => ['project_subdir' => 'my-project'],
+    'db' => ['path' => dirname(__DIR__) . '/data/git_analytics.db'],
+
+    // Project map (required).
+    // Key   = project name (--project=<name>, subfolder in reports/)
+    // Value = absolute path to git repository
+    // Default (--project omitted): first entry in the map.
+    'git-projects' => [
+        'awesome-project' => '/path/to/awesome-project',
+        'some-mvp'        => '/path/to/mvp-project',
+    ],
+
+    'output' => ['path' => dirname(__DIR__) . '/output'],
 ];
 ```
 
 Шлях до git-репозиторію можна переозначити через `--repo-path=…` у `import.php`.
 
-> **Іменування теки звітів.** За замовчуванням `basename(git.repo_path)` використовується як перший рівень підтеки: `reports/project_name/dd.mm.YYYY-dd.mm.YYYY/`. Щоб задати довільну назву незалежно від шляху, встановіть `reports.project_subdir` у `config.php`.
+> **Іменування теки звітів.** Ключ з масиву `git-projects` використовується як назва підтеки: `reports/<project-name>/dd.mm.YYYY-dd.mm.YYYY/`.
 
 ---
 
@@ -221,7 +228,8 @@ php bin/report.php \
 | `--branch=<name>` | required | Гілка для аналізу (e.g. `develop`) |
 | `--date-from=<YYYY-MM-DD>` | required | Початок періоду (включно) |
 | `--date-to=<YYYY-MM-DD>` | required | Кінець періоду (включно) |
-| `--repo-path=<path>` | optional | Шлях до git-репо (default: з `config/config.php`) |
+| `--project=<name>` | optional | Ключ проекту з масиву `projects` у `config.php` (default: перший запис) |
+| `--repo-path=<path>` | optional | Шлях до git-репо — перевизначає `--project` і `config.php` |
 | `--fresh` | flag | Видалити БД перед імпортом (повне перезаймання) |
 | `--dry-run` | flag | Парсити та логувати без запису в БД |
 | `--check-requirements` | flag | Перевірити вимоги і вийти |
@@ -278,6 +286,7 @@ php bin/report.php \
 | `--branch=<name>` | required | Гілка |
 | `--date-from=<YYYY-MM-DD>` | required | Початок періоду |
 | `--date-to=<YYYY-MM-DD>` | required | Кінець періоду |
+| `--project=<name>` | optional | Ключ проекту з масиву `projects` у `config.php` (default: перший запис) |
 | `--report=<key>` | optional | Який звіт згенерувати (default: `full-report`) |
 | `--alias=<value>` | optional | Фільтр **тільки для `reverts-*`** — за email/local-part/підрядком імені |
 | `--detail` | flag | Дописати в `reverts-*` список окремих revert-комітів |
@@ -324,6 +333,7 @@ php bin/report.php \
 | `--branch=<name>` | required | Гілка |
 | `--date-from=<YYYY-MM-DD>` | required | Початок періоду |
 | `--date-to=<YYYY-MM-DD>` | required | Кінець періоду |
+| `--project=<name>` | optional | Ключ проекту з масиву `projects` у `config.php` (default: перший запис) |
 | `--report=<key>` | optional | Який звіт експортувати (default: `all` — усі 9) |
 | `--format=<fmt>` | optional | `csv` \| `xlsx` \| `both` (default: `both`) |
 | `--alias=<value>` | optional | Фільтр **тільки для `reverts-*`** (як у `report.php`) |
@@ -364,8 +374,12 @@ reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/exports/
 ## Приклади
 
 ```bash
-# Повний звіт за весь період (тільки commits-* і lines-*)
+# Повний звіт за весь період (перший проект із config.php за замовч.)
 php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
+
+# Звіт для конкретного проекту
+php bin/report.php --project=awesome-project \
+    --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
 
 # Повний звіт із включеними reverts-*
 php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
@@ -395,7 +409,7 @@ php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 
 php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
     --report=reverts-full-period --detail
 
-# Без auto-aliasing (наприклад, якщо вже застосовано вручну і не хочемо повторювати)
+# Без auto-aliasing
 php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
     --skip-aliases
 
@@ -408,6 +422,10 @@ php bin/apply-aliases.php --dry-run
 
 # Експорт усіх 9 звітів у CSV + XLSX (default)
 php bin/export.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --force
+
+# Експорт для іншого проекту
+php bin/export.php --project=some-mvp \
+    --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --force
 
 # Лише XLSX за один звіт
 php bin/export.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \

@@ -33,6 +33,7 @@ $baseDir = dirname(__DIR__);
 // Load all source classes (simple require — no Composer in this standalone module)
 foreach ([
     'Config', 'Db', 'Logger',
+    'ProjectResolver',
     'RequirementsChecker',
     'GitCommandRunner',
     'CommitCollector',
@@ -55,6 +56,7 @@ $opts = getopt('', [
     'branch:',
     'date-from:',
     'date-to:',
+    'project::',
     'repo-path::',
     'dry-run',
     'fresh',
@@ -77,8 +79,10 @@ Required:
   --date-to=<date>       End date (inclusive), format: YYYY-MM-DD
 
 Optional:
-  --repo-path=<path>     Absolute path to git repository
-                         (default: git.repo_path from config/config.php)
+  --project=<name>       Project key from the 'projects' map in config/config.php
+                         (default: first project in the map)
+  --repo-path=<path>     Absolute path to git repository — overrides both
+                         --project and config values
   --dry-run              Run full pipeline without writing to DB
   --fresh                Wipe DB file and recreate schema before import
                          (use to avoid FK constraint errors from stale data)
@@ -93,10 +97,11 @@ Examples:
       --date-to=2026-04-25
 
   php bin/import.php \\
+      --project=awesome-project \\
       --branch=develop \\
       --date-from=2023-08-28 \\
       --date-to=2026-04-25 \\
-      --dry-run
+      --fresh
 
   php bin/import.php --check-requirements
 
@@ -159,7 +164,7 @@ if (!file_exists($configPath)) {
     echo 'To get started, copy the example configuration:' . PHP_EOL;
     echo '  cp ' . $examplePath . ' ' . $configPath . PHP_EOL;
     echo PHP_EOL;
-    echo 'Then edit config/config.php and update git.repo_path to your actual repository path.' . PHP_EOL;
+    echo 'Then edit config/config.php and set up the git-projects map with your repository paths.' . PHP_EOL;
     exit(1);
 }
 
@@ -214,19 +219,36 @@ if (!empty($errors)) {
 $branch   = (string) $opts['branch'];
 $dateFrom = (string) $opts['date-from'];
 $dateTo   = (string) $opts['date-to'];
-$repoPath = isset($opts['repo-path']) && $opts['repo-path'] !== ''
-    ? (string) $opts['repo-path']
-    : (string) Config::get('git.repo_path', $baseDir . '/../..');
 $dryRun   = isset($opts['dry-run']);
 $fresh    = isset($opts['fresh']);
+
+// ---- Resolve project / repo path ----
+// --repo-path overrides everything; otherwise use --project or config default.
+
+if (isset($opts['repo-path']) && $opts['repo-path'] !== '') {
+    $repoPath    = (string) $opts['repo-path'];
+    $projectName = ProjectResolver::sanitize(basename(rtrim($repoPath, DIRECTORY_SEPARATOR . '/')));
+} else {
+    $projectArg = isset($opts['project']) && $opts['project'] !== ''
+        ? (string) $opts['project']
+        : null;
+    try {
+        $project     = ProjectResolver::resolve($projectArg);
+        $projectName = $project['name'];
+        $repoPath    = $project['path'];
+    } catch (InvalidArgumentException $e) {
+        Logger::error($e->getMessage());
+        exit(1);
+    }
+}
 
 // ---- Validate repository path ----
 
 if (!is_dir($repoPath)) {
     Logger::error("Repository path does not exist: {$repoPath}");
-    if ($repoPath === '/path/to/repo') {
+    if ($repoPath === '/path/to/repo' || $repoPath === '/path/to/my-project') {
         Logger::error('This appears to be the default placeholder value from config.example.php.');
-        Logger::error('Please update git.repo_path in config/config.php to your actual repository path.');
+        Logger::error("Please update the 'git-projects' map in config/config.php with your actual repository path.");
     }
     exit(1);
 }
@@ -239,7 +261,7 @@ if (!is_dir($repoPath . '/.git')) {
 // ---- Start ----
 
 Logger::info('Import started');
-Logger::info("Branch: {$branch} | Period: {$dateFrom} – {$dateTo}");
+Logger::info("Project: {$projectName} | Branch: {$branch} | Period: {$dateFrom} – {$dateTo}");
 Logger::info("Repo: {$repoPath}");
 
 if ($dryRun) {

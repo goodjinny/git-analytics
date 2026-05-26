@@ -24,7 +24,8 @@ final class ReportRunner
      * @param array{
      *     branch:string, date_from:string, date_to:string,
      *     report:string, force:bool, apply_aliases?:bool,
-     *     alias?:?string, detail?:bool, make_charts?:bool, with_reverts?:bool
+     *     alias?:?string, detail?:bool, make_charts?:bool, with_reverts?:bool,
+     *     project_name?:string
      * } $opts
      */
     public function run(array $opts): void
@@ -40,10 +41,15 @@ final class ReportRunner
         $makeCharts   = (bool) ($opts['make_charts'] ?? false);
         $withReverts  = (bool) ($opts['with_reverts'] ?? false);
 
+        if (empty($opts['project_name'])) {
+            throw new RuntimeException("'project_name' must be passed to ReportRunner::run().");
+        }
+        $projectName = (string) $opts['project_name'];
+
         $this->ensureDbReady($applyAliases);
         $this->ensureDataExists($branch, $from, $to);
 
-        $outDir = $this->reportsRoot . '/' . $this->projectDirName() . '/' . $this->dirNameFor($from, $to);
+        $outDir = $this->reportsRoot . '/' . $projectName . '/' . $this->dirNameFor($from, $to);
         if (!is_dir($outDir) && !mkdir($outDir, 0755, true) && !is_dir($outDir)) {
             throw new RuntimeException("Cannot create reports directory: {$outDir}");
         }
@@ -294,40 +300,6 @@ final class ReportRunner
                DateTimeImmutable::createFromFormat('Y-m-d', $to)->format('d.m.Y');
     }
 
-    /**
-     * Derives a safe directory name from the project.
-     * Uses 'reports.project_subdir' config key if set;
-     * otherwise falls back to basename of 'git.repo_path'.
-     */
-    private function projectDirName(): string
-    {
-        $explicit = trim((string) Config::get('reports.project_subdir', ''));
-        if ($explicit !== '') {
-            return $this->sanitizePathSegment($explicit);
-        }
-
-        $repoPath = trim((string) Config::get('git.repo_path', ''));
-        if ($repoPath === '') {
-            return 'unknown-project';
-        }
-
-        $name = basename(rtrim($repoPath, DIRECTORY_SEPARATOR . '/'));
-        if ($name === '' || $name === '.' || $name === DIRECTORY_SEPARATOR) {
-            return 'unknown-project';
-        }
-
-        return $this->sanitizePathSegment($name);
-    }
-
-    /** Strips characters that are unsafe in directory names. */
-    private function sanitizePathSegment(string $value): string
-    {
-        $value = trim($value);
-        $value = preg_replace('/[^\p{L}\p{N}._-]+/u', '-', $value) ?? '';
-        $value = trim($value, '-.');
-
-        return $value !== '' ? $value : 'unknown-project';
-    }
 
     private function anchor(string $title): string
     {

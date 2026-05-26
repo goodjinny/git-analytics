@@ -156,28 +156,39 @@ class RequirementsChecker
 
     private function checkRepoPath(): array
     {
-        $repoPath = (string) Config::get('git.repo_path', '');
-        if ($repoPath === '') {
+        $projects = Config::get('git-projects', []);
+        if (empty($projects) || !is_array($projects)) {
             return [
                 'label'  => 'Git repository path configured',
                 'ok'     => false,
-                'detail' => 'git.repo_path not set in config/config.php',
+                'detail' => 'git-projects paths not set in config/config.php',
             ];
         }
 
-        if (!is_dir($repoPath)) {
-            return [
-                'label'  => 'Git repository path configured',
-                'ok'     => false,
-                'detail' => "Directory does not exist: {$repoPath}",
-            ];
+        // Validate every project path in the map.
+        foreach ($projects as $name => $repoPath) {
+            $repoPath = (string) $repoPath;
+            if (!is_dir($repoPath)) {
+                return [
+                    'label'  => 'Git repository path configured',
+                    'ok'     => false,
+                    'detail' => "Project '{$name}': directory does not exist: {$repoPath}",
+                ];
+            }
+            if (!is_dir($repoPath . '/.git')) {
+                return [
+                    'label'  => 'Git repository path configured',
+                    'ok'     => false,
+                    'detail' => "Project '{$name}': no .git directory found in: {$repoPath}",
+                ];
+            }
         }
 
-        $isGit = is_dir($repoPath . '/.git');
+        $summary = implode(', ', array_keys($projects));
         return [
             'label'  => 'Git repository path configured',
-            'ok'     => $isGit,
-            'detail' => $isGit ? $repoPath : "No .git directory found in: {$repoPath}",
+            'ok'     => true,
+            'detail' => "Projects: {$summary}",
         ];
     }
 }

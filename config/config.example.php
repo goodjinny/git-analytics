@@ -12,18 +12,19 @@ return [
         // Paths are resolved relative to the project root (dirname(__DIR__)).
         'path' => dirname(__DIR__) . '/data/git_analytics.db',
     ],
-    'git' => [
-        'repo_path' => '/path/to/repo',
+
+    // -------------------------------------------------------------------------
+    // Project map (required).
+    // Key   = project name used in --project=<name> and as report subfolder.
+    // Value = absolute path to the git repository.
+    // Default (when --project is omitted): the FIRST entry in this map.
+    // -------------------------------------------------------------------------
+    'git-projects' => [
+        'my-project' => '/path/to/my-project',
+        // 'another-project' => '/path/to/another-project',
     ],
+
     'output' => [
         'path' => dirname(__DIR__) . '/output',
     ],
-    'reports' => [
-        // Optional: override the project subfolder used when storing reports and exports.
-        // Reports are stored under: reports/<project_subdir>/dd.mm.YYYY-dd.mm.YYYY/
-        // If omitted (or empty), the basename of git.repo_path is used automatically.
-        // Example: set to 'my-project' to get reports/my-project/… regardless of repo path.
-        // 'project_subdir' => '',
-    ],
 ];
-
