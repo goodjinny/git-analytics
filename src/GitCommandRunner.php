@@ -15,6 +15,40 @@ class GitCommandRunner
     public function __construct(private readonly string $repoPath) {}
 
     /**
+     * Check whether a branch exists (local or remote) in the repository.
+     * Uses `git rev-parse --verify` which exits 0 if the ref is known.
+     */
+    public function branchExists(string $branch): bool
+    {
+        $exitCode = 0;
+        $stderr   = '';
+        // Try local branch first, then remote tracking ref.
+        foreach ([$branch, 'origin/' . $branch] as $ref) {
+            $this->exec('rev-parse --verify ' . escapeshellarg($ref), $exitCode, $stderr);
+            if ($exitCode === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return a sorted list of all local branch names in the repository.
+     *
+     * @return string[]
+     */
+    public function listBranches(): array
+    {
+        $output = $this->runSafe('branch --list --format=%(refname:short)');
+        if ($output === null || trim($output) === '') {
+            return [];
+        }
+        $branches = array_filter(array_map('trim', explode("\n", $output)));
+        sort($branches);
+        return array_values($branches);
+    }
+
+    /**
      * Run git command and return stdout. Throws RuntimeException on non-zero exit.
      */
     public function run(string $command): string

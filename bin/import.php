@@ -258,6 +258,19 @@ if (!is_dir($repoPath . '/.git')) {
     exit(1);
 }
 
+// ---- Validate branch exists in the repository ----
+
+$gitRunner = new GitCommandRunner($repoPath);
+
+if (!$gitRunner->branchExists($branch)) {
+    Logger::error("Branch '{$branch}' does not exist in repository: {$repoPath}");
+    $available = $gitRunner->listBranches();
+    if (!empty($available)) {
+        Logger::error('Available local branches: ' . implode(', ', $available));
+    }
+    exit(1);
+}
+
 // ---- Start ----
 
 Logger::info('Import started');
@@ -294,7 +307,6 @@ if (!$dryRun) {
 
 // ---- Wire dependencies ----
 
-$gitRunner        = new GitCommandRunner($repoPath);
 $ticketExtractor  = new TicketExtractor();
 $commitCollector  = new CommitCollector($gitRunner);
 $importRunRepo    = new ImportRunRepository();
