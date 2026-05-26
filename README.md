@@ -17,7 +17,7 @@ Standalone CLI-інструмент для збору, обробки та зв�
 2. **Нормалізація аліасів розробників**:
    - manual mapping (з [config/aliases.json](config/aliases.json) — gitignored; шаблон у [config/aliases.example.json](config/aliases.example.json))
    - auto-discovery через еквівалентні домени (`some-domain.com` === `some-domain.ua`)
-3. **Звіти у markdown** у `reports/dd.mm.YYYY-dd.mm.YYYY/<key>.md` із вбудованими **Mermaid**-діаграмами, що рендеряться нативно в GitHub/GitLab. За замовчуванням генеруються звіти `commits-*` і `lines-*`; звіти `reverts-*` ввімкнено окремим прапором `--with-reverts-report` або явним `--report=reverts-*`.
+3. **Звіти у markdown** у `reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/<key>.md` із вбудованими **Mermaid**-діаграмами, що рендеряться нативно в GitHub/GitLab. За замовчуванням генеруються звіти `commits-*` і `lines-*`; звіти `reverts-*` ввімкнено окремим прапором `--with-reverts-report` або явним `--report=reverts-*`.
 4. **Інтерактивний HTML-дашборд** (Chart.js) у `reports/<period>/diagrams/index.html` — генерується за прапором `--make-charts`.
 
 ---
@@ -110,19 +110,20 @@ path-to-project/git-analytics/
 │   ├── commits/*.json      # Снапшоти імпорту
 │   └── reverts/*.json
 ├── reports/
-│   └── dd.mm.YYYY-dd.mm.YYYY/
-│       ├── commits-full-period.md      # таблиця + Mermaid діаграма
-│       ├── commits-by-year.md          # таблиця + Mermaid (bar + line)
-│       ├── commits-by-month.md
-│       ├── lines-full-period.md
-│       ├── lines-by-year.md
-│       ├── lines-by-month.md
-│       ├── reverts-full-period.md
-│       ├── reverts-by-year.md
-│       ├── reverts-by-month.md
-│       ├── full-report.md              # комбінований звіт (commits-* + lines-*; з --with-reverts-report також reverts-*)
-│       └── diagrams/                   # створюється з --make-charts
-│           └── index.html              # інтерактивний Chart.js дашборд
+│   └── project_name/                   # basename(git.repo_path) або reports.project_subdir
+│       └── dd.mm.YYYY-dd.mm.YYYY/
+│           ├── commits-full-period.md      # таблиця + Mermaid діаграма
+│           ├── commits-by-year.md          # таблиця + Mermaid (bar + line)
+│           ├── commits-by-month.md
+│           ├── lines-full-period.md
+│           ├── lines-by-year.md
+│           ├── lines-by-month.md
+│           ├── reverts-full-period.md
+│           ├── reverts-by-year.md
+│           ├── reverts-by-month.md
+│           ├── full-report.md              # комбінований звіт (commits-* + lines-*; з --with-reverts-report також reverts-*)
+│           └── diagrams/                   # створюється з --make-charts
+│               └── index.html              # інтерактивний Chart.js дашборд
 ├── config/
 │   ├── config.php           # DB path, repo path, output path (gitignored)
 │   ├── config.example.php   # Шаблон конфігу (комітимо)
@@ -160,10 +161,14 @@ return [
     'db'     => ['path'      => dirname(__DIR__) . '/data/git_analytics.db'],
     'git'    => ['repo_path' => '/path/to/your-project'],
     'output' => ['path'      => dirname(__DIR__) . '/output'],
+    // Optional: override project subfolder in reports/. Default: basename of git.repo_path.
+    // 'reports' => ['project_subdir' => 'my-project'],
 ];
 ```
 
 Шлях до git-репозиторію можна переозначити через `--repo-path=…` у `import.php`.
+
+> **Іменування теки звітів.** За замовчуванням `basename(git.repo_path)` використовується як перший рівень підтеки: `reports/project_name/dd.mm.YYYY-dd.mm.YYYY/`. Щоб задати довільну назву незалежно від шляху, встановіть `reports.project_subdir` у `config.php`.
 
 ---
 
@@ -186,7 +191,7 @@ php bin/report.php \
     --date-to=2026-04-25
 ```
 
-Звіти з'являться у `reports/28.08.2023-25.04.2026/`.
+Звіти з'являться у `reports/project_name/28.08.2023-25.04.2026/`.
 
 ---
 
@@ -330,7 +335,7 @@ php bin/report.php \
 **Що генерується:**
 
 ```
-reports/dd.mm.YYYY-dd.mm.YYYY/exports/
+reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/exports/
 ├── commits-full-period.csv      ┐
 ├── commits-by-year.csv          │
 ├── commits-by-month.csv         │
@@ -482,11 +487,11 @@ xychart-beta
 ```bash
 php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
     --make-charts --force
-# → reports/01.12.2025-31.12.2025/diagrams/index.html  (6 графіків: commits-* + lines-*)
+# → reports/<project_name>/01.12.2025-31.12.2025/diagrams/index.html  (6 графіків: commits-* + lines-*)
 
 php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
     --with-reverts-report --make-charts --force
-# → reports/01.12.2025-31.12.2025/diagrams/index.html  (9 графіків: commits-* + lines-* + reverts-*)
+# → reports/<project_name>/01.12.2025-31.12.2025/diagrams/index.html  (9 графіків: commits-* + lines-* + reverts-*)
 ```
 
 **Customization:** [`HtmlDashboardBuilder`](src/HtmlDashboardBuilder.php):

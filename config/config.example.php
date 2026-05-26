@@ -18,5 +18,12 @@ return [
     'output' => [
         'path' => dirname(__DIR__) . '/output',
     ],
+    'reports' => [
+        // Optional: override the project subfolder used when storing reports and exports.
+        // Reports are stored under: reports/<project_subdir>/dd.mm.YYYY-dd.mm.YYYY/
+        // If omitted (or empty), the basename of git.repo_path is used automatically.
+        // Example: set to 'my-project' to get reports/my-project/… regardless of repo path.
+        // 'project_subdir' => '',
+    ],
 ];
 
