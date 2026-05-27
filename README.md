@@ -184,16 +184,14 @@ return [
 ```bash
 cd test/git-analytics
 
-# 1. Імпорт даних (чистий старт)
+# 1. Імпорт даних (чистий старт, гілка визначається автоматично)
 php bin/import.php \
-    --branch=develop \
     --date-from=2023-08-28 \
     --date-to=2026-04-25 \
     --fresh
 
 # 2. Згенерувати всі звіти (аліаси застосовуються автоматично)
 php bin/report.php \
-    --branch=develop \
     --date-from=2023-08-28 \
     --date-to=2026-04-25
 ```
@@ -225,7 +223,7 @@ php bin/report.php \
 
 | Параметр | Тип | Опис |
 |----------|-----|------|
-| `--branch=<name>` | required | Гілка для аналізу (e.g. `develop`) |
+| `--branch=<name>` | optional | Гілка для аналізу. Якщо не вказано — автоматично визначається `master` або `main` |
 | `--date-from=<YYYY-MM-DD>` | required | Початок періоду (включно) |
 | `--date-to=<YYYY-MM-DD>` | required | Кінець періоду (включно) |
 | `--project=<name>` | optional | Ключ проекту з масиву `projects` у `config.php` (default: перший запис) |
@@ -283,7 +281,7 @@ php bin/report.php \
 
 | Параметр | Тип | Опис |
 |----------|-----|------|
-| `--branch=<name>` | required | Гілка |
+| `--branch=<name>` | optional | Гілка. Якщо не вказано — автоматично визначається `master` або `main` |
 | `--date-from=<YYYY-MM-DD>` | required | Початок періоду |
 | `--date-to=<YYYY-MM-DD>` | required | Кінець періоду |
 | `--project=<name>` | optional | Ключ проекту з масиву `projects` у `config.php` (default: перший запис) |
@@ -330,7 +328,7 @@ php bin/report.php \
 
 | Параметр | Тип | Опис |
 |----------|-----|------|
-| `--branch=<name>` | required | Гілка |
+| `--branch=<name>` | optional | Гілка. Якщо не вказано — автоматично визначається `master` або `main` |
 | `--date-from=<YYYY-MM-DD>` | required | Початок періоду |
 | `--date-to=<YYYY-MM-DD>` | required | Кінець періоду |
 | `--project=<name>` | optional | Ключ проекту з масиву `projects` у `config.php` (default: перший запис) |
@@ -375,64 +373,64 @@ reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/exports/
 
 ```bash
 # Повний звіт за весь період (перший проект із config.php за замовч.)
-php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
+php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25
 
 # Звіт для конкретного проекту
 php bin/report.php --project=awesome-project \
-    --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
+    --branch=master --date-from=2023-08-28 --date-to=2026-04-25
 
 # Повний звіт із включеними reverts-*
-php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
     --with-reverts-report
 
 # Окремий звіт із перезаписом
-php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
     --report=commits-full-period --force
 
 # Усі commits-* і lines-* окремими файлами + комбінований
-php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
     --report=all --force
 
 # Усі 9 звітів окремими файлами + комбінований (включаючи reverts-*)
-php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
     --report=all --with-reverts-report --force
 
 # Звіт по відкатах — генерується напряму без --with-reverts-report
-php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --report=reverts-full-period
 
 # Reverts конкретного розробника з деталями
-php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --report=reverts-by-month --detail --alias=jane.smith
 
 # Reverts усіх — із деталями
-php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --report=reverts-full-period --detail
 
 # Без auto-aliasing
-php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
     --skip-aliases
 
 # Згенерувати markdown + інтерактивний HTML-дашборд
-php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
     --make-charts --force
 
 # Перевірити, що зробив би apply-aliases (без запису в БД)
 php bin/apply-aliases.php --dry-run
 
 # Експорт усіх 9 звітів у CSV + XLSX (default)
-php bin/export.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --force
+php bin/export.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --force
 
 # Експорт для іншого проекту
 php bin/export.php --project=some-mvp \
-    --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --force
+    --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --force
 
 # Лише XLSX за один звіт
-php bin/export.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+php bin/export.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --report=commits-by-month --format=xlsx --force
 
 # CSV з деталями відкатів для конкретного розробника
-php bin/export.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+php bin/export.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --format=csv --detail --alias=jane.smith --force
 ```
 
@@ -503,11 +501,11 @@ xychart-beta
 **Запуск:**
 
 ```bash
-php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --make-charts --force
 # → reports/<project_name>/01.12.2025-31.12.2025/diagrams/index.html  (6 графіків: commits-* + lines-*)
 
-php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \
+php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --with-reverts-report --make-charts --force
 # → reports/<project_name>/01.12.2025-31.12.2025/diagrams/index.html  (9 графіків: commits-* + lines-* + reverts-*)
 ```

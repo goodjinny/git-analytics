@@ -5,13 +5,13 @@ declare(strict_types=1);
  * Git analytics — main CLI import entrypoint.
  *
  * Usage:
- *   php bin/import.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
- *   php bin/import.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --dry-run
+ *   php bin/import.php --date-from=2023-08-28 --date-to=2026-04-25
+ *   php bin/import.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --dry-run
  *   php bin/import.php --check-requirements
  *   php bin/import.php --help
  *
  * Options:
- *   --branch=<name>        Branch to analyze (required)
+ *   --branch=<name>        Branch to analyze (optional; auto-detects master/main if omitted)
  *   --date-from=<date>     Start date YYYY-MM-DD (required)
  *   --date-to=<date>       End date YYYY-MM-DD (required)
  *   --repo-path=<path>     Path to git repository (optional, overrides config/config.php)
@@ -53,7 +53,7 @@ foreach ([
 // ---- Parse CLI arguments (before loading config so --help works without config) ----
 
 $opts = getopt('', [
-    'branch:',
+    'branch::',
     'date-from:',
     'date-to:',
     'project::',
@@ -71,14 +71,14 @@ Git Analytics Import
 ====================
 
 Usage:
-  php bin/import.php --branch=<name> --date-from=<YYYY-MM-DD> --date-to=<YYYY-MM-DD> [OPTIONS]
+  php bin/import.php --date-from=<YYYY-MM-DD> --date-to=<YYYY-MM-DD> [OPTIONS]
 
 Required:
-  --branch=<name>        Branch to analyze (e.g. develop)
   --date-from=<date>     Start date (inclusive), format: YYYY-MM-DD
   --date-to=<date>       End date (inclusive), format: YYYY-MM-DD
 
 Optional:
+  --branch=<name>        Branch to analyze (default: auto-detects "master" or "main")
   --project=<name>       Project key from the 'projects' map in config/config.php
                          (default: first project in the map)
   --repo-path=<path>     Absolute path to git repository — overrides both
@@ -91,16 +91,20 @@ Optional:
   --help                 Show this help
 
 Examples:
-  php bin/import.php \\
-      --branch=develop \\
-      --date-from=2023-08-28 \\
+  php bin/import.php \
+      --date-from=2023-08-28 \
       --date-to=2026-04-25
 
-  php bin/import.php \\
-      --project=awesome-project \\
-      --branch=develop \\
-      --date-from=2023-08-28 \\
-      --date-to=2026-04-25 \\
+  php bin/import.php \
+      --branch=master \
+      --date-from=2023-08-28 \
+      --date-to=2026-04-25
+
+  php bin/import.php \
+      --project=awesome-project \
+      --branch=master \
+      --date-from=2023-08-28 \
+      --date-to=2026-04-25 \
       --fresh
 
   php bin/import.php --check-requirements
@@ -186,9 +190,6 @@ if (!$passed) {
 
 $errors = [];
 
-if (empty($opts['branch'])) {
-    $errors[] = '--branch is required';
-}
 
 if (empty($opts['date-from'])) {
     $errors[] = '--date-from is required';
@@ -216,7 +217,7 @@ if (!empty($errors)) {
     exit(1);
 }
 
-$branch   = (string) $opts['branch'];
+$branch   = isset($opts['branch']) ? trim((string) $opts['branch']) : '';
 $dateFrom = (string) $opts['date-from'];
 $dateTo   = (string) $opts['date-to'];
 $dryRun   = isset($opts['dry-run']);
@@ -258,11 +259,28 @@ if (!is_dir($repoPath . '/.git')) {
     exit(1);
 }
 
-// ---- Validate branch exists in the repository ----
+// ---- Validate branch / auto-detect if omitted ----
 
 $gitRunner = new GitCommandRunner($repoPath);
 
-if (!$gitRunner->branchExists($branch)) {
+if ($branch === '') {
+    foreach (['master', 'main'] as $candidate) {
+        if ($gitRunner->branchExists($candidate)) {
+            $branch = $candidate;
+            Logger::info("Branch not specified. Auto-detected: '{$branch}'");
+            break;
+        }
+    }
+    if ($branch === '') {
+        Logger::error('--branch is not specified and neither "master" nor "main" branch was found in repository: ' . $repoPath);
+        $available = $gitRunner->listBranches();
+        if (!empty($available)) {
+            Logger::error('Available branches: ' . implode(', ', $available));
+        }
+        Logger::error('Please specify a branch explicitly with --branch=<name>');
+        exit(1);
+    }
+} elseif (!$gitRunner->branchExists($branch)) {
     Logger::error("Branch '{$branch}' does not exist in repository: {$repoPath}");
     $available = $gitRunner->listBranches();
     if (!empty($available)) {

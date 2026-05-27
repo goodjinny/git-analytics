@@ -34,6 +34,7 @@ $baseDir = dirname(__DIR__);
 foreach ([
     'Config', 'Db', 'Logger',
     'ProjectResolver',
+    'GitCommandRunner',
     'AliasApplier',
     'ReportDefinitions',
     'ReportRepository',
@@ -50,7 +51,7 @@ foreach ([
 // ----------------------------------------------------------------------
 
 $opts = getopt('', [
-    'branch:',
+    'branch::',
     'date-from:',
     'date-to:',
     'project::',
@@ -99,8 +100,8 @@ relevant period with bin/import.php (otherwise reports will fail with
 "No data for the period").
 
 Recommended workflow:
-  1. php bin/import.php  --branch=develop --date-from=… --date-to=… [--fresh]
-  2. php bin/report.php  --branch=develop --date-from=… --date-to=… [--report=<key>]
+  1. php bin/import.php  --branch=master --date-from=… --date-to=… [--fresh]
+  2. php bin/report.php  --branch=master --date-from=… --date-to=… [--report=<key>]
 
 By default this script applies developer aliases automatically (idempotent —
 same effect as running bin/apply-aliases.php before reports). Pass
@@ -108,14 +109,14 @@ same effect as running bin/apply-aliases.php before reports). Pass
 prefer to manage aliases manually.
 
 Usage:
-  php bin/report.php --branch=<name> --date-from=<YYYY-MM-DD> --date-to=<YYYY-MM-DD> [OPTIONS]
+  php bin/report.php --date-from=<YYYY-MM-DD> --date-to=<YYYY-MM-DD> [OPTIONS]
 
 Required:
-  --branch=<name>        Branch (e.g. develop)
   --date-from=<date>     Period start, YYYY-MM-DD (inclusive)
   --date-to=<date>       Period end,   YYYY-MM-DD (inclusive)
 
 Optional:
+  --branch=<name>        Branch (default: auto-detects "master" or "main")
   --project=<name>       Project key from the 'projects' map in config/config.php
                          (default: first project in the map)
   --report=<key>         Which report to generate. Default: full-report
@@ -159,11 +160,11 @@ Errors:
     with a message instructing you to run bin/import.php first.
 
 Examples:
-  php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
-  php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --report=commits-full-period
-  php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --report=all --force
-  php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25 --report=all --with-reverts-report --force
-  php bin/report.php --branch=develop --date-from=2025-12-01 --date-to=2025-12-31 \\
+  php bin/report.php --date-from=2023-08-28 --date-to=2026-04-25
+  php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --report=commits-full-period
+  php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --report=all --force
+  php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --report=all --with-reverts-report --force
+  php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \\
       --report=reverts-by-month --detail --alias=jsmith
 
 HELP;
@@ -195,6 +196,7 @@ $projectArg = isset($opts['project']) && $opts['project'] !== '' ? (string) $opt
 try {
     $project     = ProjectResolver::resolve($projectArg);
     $projectName = $project['name'];
+    $repoPath    = $project['path'];
 } catch (InvalidArgumentException $e) {
     echo '[ERROR] ' . $e->getMessage() . PHP_EOL;
     echo PHP_EOL . 'Run with --help for usage.' . PHP_EOL;
@@ -208,9 +210,6 @@ try {
 $errors = [];
 
 $branch = isset($opts['branch']) ? trim((string) $opts['branch']) : '';
-if ($branch === '') {
-    $errors[] = '--branch is required';
-}
 
 $dateFrom = isset($opts['date-from']) ? (string) $opts['date-from'] : '';
 $dateTo   = isset($opts['date-to'])   ? (string) $opts['date-to']   : '';
@@ -251,6 +250,28 @@ if (!empty($errors)) {
     }
     echo PHP_EOL . 'Run with --help for usage.' . PHP_EOL;
     exit(1);
+}
+
+// ---- Auto-detect branch if not provided ----
+
+if ($branch === '') {
+    $gitRunner = new GitCommandRunner($repoPath);
+    foreach (['master', 'main'] as $candidate) {
+        if ($gitRunner->branchExists($candidate)) {
+            $branch = $candidate;
+            Logger::info("Branch not specified. Auto-detected: '{$branch}'");
+            break;
+        }
+    }
+    if ($branch === '') {
+        Logger::error('--branch is not specified and neither "master" nor "main" branch was found in repository: ' . $repoPath);
+        $available = $gitRunner->listBranches();
+        if (!empty($available)) {
+            Logger::error('Available branches: ' . implode(', ', $available));
+        }
+        Logger::error('Please specify a branch explicitly with --branch=<name>');
+        exit(1);
+    }
 }
 
 $force        = isset($opts['force']);
