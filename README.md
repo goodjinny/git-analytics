@@ -17,9 +17,8 @@ Standalone CLI-інструмент для збору, обробки та зв�
 2. **Нормалізація аліасів розробників**:
    - manual mapping (з `config/<project-name>.aliases.json` — gitignored; шаблон у [config/aliases.example.json](config/aliases.example.json))
    - auto-discovery через еквівалентні домени (`some-domain.com` === `some-domain.ua`)
-3. **Звіти у markdown** у `reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/<key>.md` із вбудованими **Mermaid**-діаграмами, що рендеряться нативно в GitHub/GitLab. За замовчуванням генеруються звіти `commits-*` і `lines-*`; звіти `reverts-*` ввімкнено окремим прапором `--with-reverts-report` або явним `--report=reverts-*`.
+3. **Звіти у markdown** у `reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/<key>.md` із вбудованими **Mermaid**-діаграмами, що рендеряться нативно в GitHub/GitLab. За замовчуванням генеруються звіти `commits-*` і `lines-*`; звіти `reverts-*` ввімкнено окремим прапором `--with-reverts-report` або явним `--report=reverts-*`. Адаптовані під [Google Notebook LM](https://notebooklm.google.com) для подальшої [візуалізації](https://drive.google.com/file/d/1xO-5Y-PZDYg5pjnJ8kraQJ_vW0oW0RgZ/view?usp=sharing). 
 4. **Інтерактивний HTML-дашборд** (Chart.js) у `reports/<period>/diagrams/index.html` — генерується за прапором `--make-charts`.
-
 ---
 
 ## Архітектура
