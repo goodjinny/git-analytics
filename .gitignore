@@ -6,6 +6,5 @@ task.md
 make*.md
 
 # Real alias mapping — may contain personal/company data.
-# Public template (config/aliases.example.json) is committed.
-config/aliases.json
+config/*.aliases.json
 config/config.php

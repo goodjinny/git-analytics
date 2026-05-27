@@ -11,8 +11,14 @@ declare(strict_types=1);
  * Note: bin/report.php also runs AliasApplier automatically (unless
  * --skip-aliases). This CLI is still useful for standalone runs and --dry-run.
  *
+ * Alias file lookup order:
+ *   1. config/<project-name>.aliases.json  (project-specific, gitignored)
+ *   2. config/aliases.json                 (global fallback, gitignored)
+ *   3. config/aliases.example.json         (template — warns user)
+ *
  * Usage:
  *   php bin/apply-aliases.php
+ *   php bin/apply-aliases.php --project=my-project
  *   php bin/apply-aliases.php --dry-run
  */
 
@@ -22,12 +28,12 @@ if (PHP_SAPI !== 'cli') {
 
 $baseDir = dirname(__DIR__);
 
-foreach (['Config', 'Db', 'Logger', 'AliasApplier'] as $class) {
+foreach (['Config', 'Db', 'Logger', 'ProjectResolver', 'AliasApplier'] as $class) {
     require_once $baseDir . '/src/' . $class . '.php';
 }
 
 // Parse args before loading config so --help works without config
-$opts   = getopt('', ['dry-run', 'help']);
+$opts   = getopt('', ['project::', 'dry-run', 'help']);
 $dryRun = isset($opts['dry-run']);
 
 if (isset($opts['help'])) {
@@ -35,11 +41,20 @@ if (isset($opts['help'])) {
 apply-aliases — apply developer alias_id migration
 
 Usage:
-  php bin/apply-aliases.php [--dry-run]
+  php bin/apply-aliases.php [--project=<name>] [--dry-run]
 
 Options:
-  --dry-run   Show what would be changed without writing to DB
-  --help      Show this help
+  --project=<name>   Project key from git-projects in config.php
+                     (default: first project in the map).
+                     Determines which alias file to load:
+                       config/<project-name>.aliases.json
+  --dry-run          Show what would be changed without writing to DB
+  --help             Show this help
+
+Alias file lookup order (first found wins):
+  1. config/<project-name>.aliases.json  (project-specific, gitignored)
+  2. config/aliases.json                 (global fallback, gitignored)
+  3. config/aliases.example.json         (template — warns and proceeds)
 
 Alias pairs are matched by (author_name, author_email) — independent of
 primary-key ids. Safe to re-run after import.php --fresh.
@@ -62,7 +77,7 @@ if (!file_exists($configPath)) {
     echo 'To get started, copy the example configuration:' . PHP_EOL;
     echo '  cp ' . $examplePath . ' ' . $configPath . PHP_EOL;
     echo PHP_EOL;
-    echo 'Then edit config/config.php and update git.repo_path to your repository path.' . PHP_EOL;
+    echo 'Then edit config/config.php and set up the git-projects map with your repository paths.' . PHP_EOL;
     exit(1);
 }
 
@@ -70,10 +85,22 @@ Config::load($configPath);
 $outputPath = (string) Config::get('output.path', $baseDir . '/output');
 Logger::init($outputPath);
 
-Logger::info('apply-aliases started' . ($dryRun ? ' [DRY-RUN]' : ''));
+// ---- Resolve project ----
+
+$projectArg = isset($opts['project']) && $opts['project'] !== '' ? (string) $opts['project'] : null;
+try {
+    $project     = ProjectResolver::resolve($projectArg);
+    $projectName = $project['name'];
+} catch (InvalidArgumentException $e) {
+    echo '[ERROR] ' . $e->getMessage() . PHP_EOL;
+    echo PHP_EOL . 'Run with --help for usage.' . PHP_EOL;
+    exit(1);
+}
+
+Logger::info('apply-aliases started' . ($dryRun ? ' [DRY-RUN]' : '') . " [project: {$projectName}]");
 
 try {
-    $applier = new AliasApplier($baseDir);
+    $applier = new AliasApplier($baseDir, $projectName);
     $stats   = $applier->apply($dryRun, quiet: false);
 
     Logger::info('');

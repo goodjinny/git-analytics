@@ -15,7 +15,7 @@ Standalone CLI-інструмент для збору, обробки та зв�
    - тікети (з префіксом RFC), знайдені у заголовку/тілі комітів
    - відкати — комміти виду `Revert "Merge branch 'X' ..."` з визначенням постраждалого розробника
 2. **Нормалізація аліасів розробників**:
-   - manual mapping (з [config/aliases.json](config/aliases.json) — gitignored; шаблон у [config/aliases.example.json](config/aliases.example.json))
+   - manual mapping (з `config/<project-name>.aliases.json` — gitignored; шаблон у [config/aliases.example.json](config/aliases.example.json))
    - auto-discovery через еквівалентні домени (`some-domain.com` === `some-domain.ua`)
 3. **Звіти у markdown** у `reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/<key>.md` із вбудованими **Mermaid**-діаграмами, що рендеряться нативно в GitHub/GitLab. За замовчуванням генеруються звіти `commits-*` і `lines-*`; звіти `reverts-*` ввімкнено окремим прапором `--with-reverts-report` або явним `--report=reverts-*`.
 4. **Інтерактивний HTML-дашборд** (Chart.js) у `reports/<period>/diagrams/index.html` — генерується за прапором `--make-charts`.
@@ -125,10 +125,10 @@ path-to-project/git-analytics/
 │           └── diagrams/                   # створюється з --make-charts
 │               └── index.html              # інтерактивний Chart.js дашборд
 ├── config/
-│   ├── config.php           # DB path, repo path, output path (gitignored)
-│   ├── config.example.php   # Шаблон конфігу (комітимо)
-│   ├── aliases.json         # Реальні alias-пари + еквівалентні домени (gitignored)
-│   └── aliases.example.json # Шаблон з нейтральними прикладами (комітимо)
+│   ├── config.php                   # DB path, repo path, output path (gitignored)
+│   ├── config.example.php           # Шаблон конфігу (комітимо)
+│   ├── <project-name>.aliases.json  # Аліаси для конкретного проекту (gitignored)
+│   └── aliases.example.json         # Шаблон alias-файлу (комітимо)
 ├── schema.sqlite.sql       # DDL для SQLite (taблиці + views)
 ├── schema.sql              # MySQL варіант (не використовується)
 ├── task.md                 # Технічна постановка задачі
@@ -176,6 +176,11 @@ return [
 Шлях до git-репозиторію можна переозначити через `--repo-path=…` у `import.php`.
 
 > **Іменування теки звітів.** Ключ з масиву `git-projects` використовується як назва підтеки: `reports/<project-name>/dd.mm.YYYY-dd.mm.YYYY/`.
+
+> **Файл аліасів.** Для кожного проекту можна створити окремий файл аліасів:
+> `config/<project-name>.aliases.json` (наприклад `config/my-project.aliases.json`).
+> Шаблон: [config/aliases.example.json](config/aliases.example.json) — скопіюйте і заповніть реальними даними.
+> Якщо проектний файл не знайдено, використовується `config/aliases.json` (глобальний fallback).
 
 ---
 
@@ -248,12 +253,24 @@ php bin/report.php \
 
 | Параметр | Опис |
 |----------|------|
+| `--project=<name>` | Ключ проекту з `git-projects` у `config.php` (default: перший запис). Визначає файл аліасів: `config/<project-name>.aliases.json` |
 | `--dry-run` | Показати зміни без запису в БД |
 | `--help` | Допомога |
 
+**Файл аліасів (пріоритет пошуку):**
+1. `config/<project-name>.aliases.json` — проектний файл (gitignored)
+2. `config/aliases.json` — глобальний fallback (gitignored)
+3. `config/aliases.example.json` — шаблон (видає попередження)
+
+Щоб налаштувати аліаси для проекту `my-project`:
+```bash
+cp config/aliases.example.json config/my-project.aliases.json
+# Відредагуйте config/my-project.aliases.json — замінить приклади реальними даними
+```
+
 **Логіка:**
-1. Manual pairs — завантажуються з [config/aliases.json](config/aliases.json) (gitignored; шаблон — [config/aliases.example.json](config/aliases.example.json)). Пошук по `(author_name, author_email)`, не за id — стабільно після `--fresh`.
-2. Auto-discovery за еквівалентними доменами з того ж конфігу:
+1. Manual pairs — завантажуються з файлу аліасів проекту. Пошук по `(author_name, author_email)`, не за id — стабільно після `--fresh`.
+2. Auto-discovery за еквівалентними доменами з того ж файлу:
    ```json
    {
        "equivalent_domains": [
@@ -418,6 +435,9 @@ php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
 # Перевірити, що зробив би apply-aliases (без запису в БД)
 php bin/apply-aliases.php --dry-run
 
+# Для конкретного проекту
+php bin/apply-aliases.php --project=my-project --dry-run
+
 # Експорт усіх 9 звітів у CSV + XLSX (default)
 php bin/export.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --force
 
@@ -567,6 +587,8 @@ php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
 
 Без застосування аліасів `sjohnson` (логін) і `Sam Johnson` (повне ім'я) рахувались би як два різні розробники у звітах.
 
+**Alias file для проекту `my-project`:** `config/my-project.aliases.json` (формат — flat JSON з полями `pairs` + `equivalent_domains`; шаблон — `config/aliases.example.json`).
+
 ---
 
 ## SQLite — корисні запити
@@ -595,7 +617,7 @@ ORDER BY revert_date DESC;
 |---------|-------------------|
 | `SQLSTATE[23000]: FOREIGN KEY constraint failed` під час import | Запустити `bin/import.php ... --fresh` для чистого імпорту |
 | `Неможливо створити звіт: у БД немає даних...` | Спочатку зробити `bin/import.php` для того ж branch + period |
-| У звіті по одному розробнику кілька рядків (логін + повне ім'я) | Не застосовано аліаси. Запустити без `--skip-aliases` або `bin/apply-aliases.php` |
+| У звіті по одному розробнику кілька рядків (логін + повне ім'я) | Не застосовано аліаси. Запустити без `--skip-aliases` або `bin/apply-aliases.php`. Переконайтесь, що `config/<project-name>.aliases.json` існує і заповнений |
 | `Missing analytics view: vw_commit_facts` | View не створено. Запустити `bin/apply-aliases.php` (перестворює views) або `bin/import.php` (initSchema створює) |
 | `git: not found` у `--check-requirements` | Встановити git і додати у `$PATH` |
 | Хочу спробувати alias-логіку без запису | `php bin/apply-aliases.php --dry-run` |

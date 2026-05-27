@@ -52,7 +52,7 @@ final class ExportRunner
         }
         $projectName = (string) $opts['project_name'];
 
-        $this->ensureDbReady($applyAliases);
+        $this->ensureDbReady($applyAliases, $projectName);
         $this->ensureDataExists($projectName, $branch, $from, $to);
 
         $exportDir = $this->reportsRoot . '/' . $projectName . '/' . $this->dirNameFor($from, $to) . '/exports';
@@ -156,13 +156,13 @@ final class ExportRunner
 
     // ------------------------------------------------------------------
 
-    private function ensureDbReady(bool $applyAliases): void
+    private function ensureDbReady(bool $applyAliases, string $projectName): void
     {
         Db::initSchema($this->baseDir . '/schema.sqlite.sql');
 
         if ($applyAliases) {
             Logger::info('Applying developer aliases (AliasApplier)…');
-            $applier = new AliasApplier($this->baseDir);
+            $applier = new AliasApplier($this->baseDir, $projectName);
             $stats   = $applier->apply(dryRun: false, quiet: true);
             Logger::info(sprintf(
                 'Aliases — applied: %d, skipped: %d, total pairs: %d, alias records in DB: %d, ' .

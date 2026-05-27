@@ -1,6 +1,5 @@
 {
-    "$schema_description": "Template for config/aliases.json — copy this file to config/aliases.json and replace the example entries with your real data. The actual config/aliases.json is gitignored so personal data does not leak. Match rule: pairs are resolved by (author_name, author_email) lookup, not by primary-key id — safe across `bin/import.php --fresh`. In equivalent_domains the FIRST domain of each group is the preferred canonical domain when picking the surviving record.",
-
+    "$schema_description": "Template for a project-specific alias file. Copy this file to config/<your-project-name>.aliases.json (e.g. config/my-project.aliases.json) and replace the example entries with your real data. Project-specific alias files are gitignored so personal data does not leak. A global fallback config/aliases.json is also supported (used when no project-specific file is found). Match rule: pairs are resolved by (author_name, author_email) lookup, not by primary-key id — safe across `bin/import.php --fresh`. In equivalent_domains the FIRST domain of each group is the preferred canonical domain when picking the surviving record.",
     "pairs": [
         {
             "alias_name":  "jsmith",

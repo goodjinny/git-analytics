@@ -23,10 +23,10 @@ declare(strict_types=1);
  */
 final class AliasApplier
 {
-    /** Primary config (gitignored — may contain real names). */
-    private const CONFIG_FILE = 'config/aliases.json';
+    /** Global fallback config (gitignored — may contain real names). */
+    private const GLOBAL_CONFIG_FILE = 'config/aliases.json';
 
-    /** Public template — fallback so the tool runs out-of-the-box on a fresh clone. */
+    /** Public template — last-resort fallback so the tool works on a fresh clone. */
     private const CONFIG_EXAMPLE_FILE = 'config/aliases.example.json';
 
     /**
@@ -50,34 +50,58 @@ final class AliasApplier
     /** Absolute path to the alias config file actually loaded (for diagnostics). */
     private string $loadedConfigPath = '';
 
-    public function __construct(private readonly string $baseDir)
-    {
+    /**
+     * @param string $baseDir     Absolute path to the project root.
+     * @param string $projectName Project key (from config git-projects map).
+     *                            When set, looks for config/<project-name>.aliases.json first.
+     */
+    public function __construct(
+        private readonly string $baseDir,
+        private readonly string $projectName = ''
+    ) {
         $this->loadConfig();
     }
 
     /**
-     * Read pairs + equivalent_domains from config/aliases.json
-     * (or config/aliases.example.json as fallback). Validates structure.
+     * Read pairs + equivalent_domains from the resolved alias config file.
+     * Validates structure and populates $this->pairs / $this->equivalentDomains.
      */
     private function loadConfig(): void
     {
-        $primary  = $this->baseDir . '/' . self::CONFIG_FILE;
-        $fallback = $this->baseDir . '/' . self::CONFIG_EXAMPLE_FILE;
+        $candidates = [];
 
-        if (is_file($primary)) {
-            $path = $primary;
-        } elseif (is_file($fallback)) {
-            $path = $fallback;
+        if ($this->projectName !== '') {
+            $candidates[] = $this->baseDir . '/config/' . $this->projectName . '.aliases.json';
+        }
+
+        $candidates[] = $this->baseDir . '/' . self::GLOBAL_CONFIG_FILE;
+        $example      = $this->baseDir . '/' . self::CONFIG_EXAMPLE_FILE;
+
+        $path = null;
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                $path = $candidate;
+                break;
+            }
+        }
+
+        if ($path === null && is_file($example)) {
+            $path = $example;
+            $suggestedFile = $this->projectName !== ''
+                ? 'config/' . $this->projectName . '.aliases.json'
+                : self::GLOBAL_CONFIG_FILE;
             Logger::warning(sprintf(
                 'Using example alias config: %s. Copy it to %s and customise for real data.',
                 self::CONFIG_EXAMPLE_FILE,
-                self::CONFIG_FILE
+                $suggestedFile
             ));
-        } else {
-            throw new RuntimeException(sprintf(
-                'Alias config not found. Expected one of:%s  - %s%s  - %s',
-                PHP_EOL, $primary, PHP_EOL, $fallback
-            ));
+        }
+
+        if ($path === null) {
+            $listed = implode(PHP_EOL . '  - ', array_merge($candidates, [$example]));
+            throw new RuntimeException(
+                'Alias config not found. Expected one of:' . PHP_EOL . '  - ' . $listed
+            );
         }
 
         $this->loadedConfigPath = $path;

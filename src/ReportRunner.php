@@ -46,7 +46,7 @@ final class ReportRunner
         }
         $projectName = (string) $opts['project_name'];
 
-        $this->ensureDbReady($applyAliases);
+        $this->ensureDbReady($applyAliases, $projectName);
         $this->ensureDataExists($projectName, $branch, $from, $to);
 
         $outDir = $this->reportsRoot . '/' . $projectName . '/' . $this->dirNameFor($from, $to);
@@ -140,7 +140,7 @@ final class ReportRunner
     // Steps
     // ------------------------------------------------------------------
 
-    private function ensureDbReady(bool $applyAliases): void
+    private function ensureDbReady(bool $applyAliases, string $projectName): void
     {
         // Ensure schema exists (idempotent).
         Db::initSchema($this->baseDir . '/schema.sqlite.sql');
@@ -149,7 +149,7 @@ final class ReportRunner
         // the alias_id column, recreates views, and reassigns commits/reverts.
         if ($applyAliases) {
             Logger::info('Applying developer aliases (AliasApplier)…');
-            $applier = new AliasApplier($this->baseDir);
+            $applier = new AliasApplier($this->baseDir, $projectName);
             $stats   = $applier->apply(dryRun: false, quiet: true);
             Logger::info(sprintf(
                 'Aliases — applied: %d, skipped: %d, total pairs: %d, alias records in DB: %d, ' .
