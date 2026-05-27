@@ -157,7 +157,7 @@ php path-to-project/git-analytics/bin/import.php --check-requirements
 1. Встановіть PHP та необхідні розширення:
 
    ```bash
-   apt-get update && apt-get install -y php-cli php-sqlite3 php-mbstring php-zip
+   sudo apt-get update && sudo apt-get install -y php-cli php-sqlite3 php-mbstring php-zip
    ```
 
 2. Клонуйте репозиторій:
