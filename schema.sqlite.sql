@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS import_runs (
     created_at        TEXT     NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Migration for existing databases: add project_name if the column is absent.
+-- Db::initSchema silently skips this when the column already exists.
+-- Must run BEFORE the indexes and views that reference project_name.
+ALTER TABLE import_runs ADD COLUMN project_name TEXT NOT NULL DEFAULT '';
+
 CREATE INDEX IF NOT EXISTS idx_import_runs_branch_period
     ON import_runs(target_branch, report_date_from, report_date_to);
 
@@ -298,9 +303,6 @@ LEFT JOIN  developers  ad ON ad.id = r.affected_developer_id
 LEFT JOIN  tickets     t  ON t.id  = r.ticket_id
 LEFT JOIN  commits     mc ON mc.id = r.matched_commit_id;
 
--- ============================================================================
--- Migrations for existing databases
--- (Db::initSchema silently skips these if the column already exists)
--- ============================================================================
 
-ALTER TABLE import_runs ADD COLUMN project_name TEXT NOT NULL DEFAULT '';
+
+
