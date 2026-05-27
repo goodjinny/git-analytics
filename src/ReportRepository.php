@@ -20,7 +20,7 @@ final class ReportRepository
     // Commits
     // ------------------------------------------------------------------
 
-    public function commitsFullPeriod(string $branch, string $from, string $to): array
+    public function commitsFullPeriod(string $project, string $branch, string $from, string $to): array
     {
         return Db::fetchAll(
             'SELECT
@@ -28,18 +28,19 @@ final class ReportRepository
                 COALESCE(canonical_author_display, author_display) AS dev_name,
                 COUNT(*)                      AS value
              FROM vw_commit_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND commit_date BETWEEN :from AND :to
                AND technical_commit = 0
                AND is_merge_commit  = 0
                AND is_revert_commit = 0
              GROUP BY canonical_developer_id
              ORDER BY value DESC, dev_name ASC',
-            [':branch' => $branch, ':from' => $from, ':to' => $to]
+            [':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to]
         );
     }
 
-    public function commitsByYear(string $branch, string $from, string $to): array
+    public function commitsByYear(string $project, string $branch, string $from, string $to): array
     {
         return Db::fetchAll(
             'SELECT
@@ -48,18 +49,19 @@ final class ReportRepository
                 CAST(commit_year AS TEXT)     AS period,
                 COUNT(*)                      AS value
              FROM vw_commit_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND commit_date BETWEEN :from AND :to
                AND technical_commit = 0
                AND is_merge_commit  = 0
                AND is_revert_commit = 0
              GROUP BY canonical_developer_id, commit_year
              ORDER BY commit_year ASC, value DESC',
-            [':branch' => $branch, ':from' => $from, ':to' => $to]
+            [':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to]
         );
     }
 
-    public function commitsByMonth(string $branch, string $from, string $to): array
+    public function commitsByMonth(string $project, string $branch, string $from, string $to): array
     {
         return Db::fetchAll(
             'SELECT
@@ -68,14 +70,15 @@ final class ReportRepository
                 commit_year_month             AS period,
                 COUNT(*)                      AS value
              FROM vw_commit_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND commit_date BETWEEN :from AND :to
                AND technical_commit = 0
                AND is_merge_commit  = 0
                AND is_revert_commit = 0
              GROUP BY canonical_developer_id, commit_year_month
              ORDER BY commit_year_month ASC, value DESC',
-            [':branch' => $branch, ':from' => $from, ':to' => $to]
+            [':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to]
         );
     }
 
@@ -83,7 +86,7 @@ final class ReportRepository
     // Lines changed
     // ------------------------------------------------------------------
 
-    public function linesFullPeriod(string $branch, string $from, string $to): array
+    public function linesFullPeriod(string $project, string $branch, string $from, string $to): array
     {
         return Db::fetchAll(
             'SELECT
@@ -91,18 +94,19 @@ final class ReportRepository
                 COALESCE(canonical_author_display, author_display) AS dev_name,
                 COALESCE(SUM(lines_changed_total), 0) AS value
              FROM vw_commit_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND commit_date BETWEEN :from AND :to
                AND technical_commit = 0
                AND is_merge_commit  = 0
                AND is_revert_commit = 0
              GROUP BY canonical_developer_id
              ORDER BY value DESC, dev_name ASC',
-            [':branch' => $branch, ':from' => $from, ':to' => $to]
+            [':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to]
         );
     }
 
-    public function linesByYear(string $branch, string $from, string $to): array
+    public function linesByYear(string $project, string $branch, string $from, string $to): array
     {
         return Db::fetchAll(
             'SELECT
@@ -111,18 +115,19 @@ final class ReportRepository
                 CAST(commit_year AS TEXT)     AS period,
                 COALESCE(SUM(lines_changed_total), 0) AS value
              FROM vw_commit_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND commit_date BETWEEN :from AND :to
                AND technical_commit = 0
                AND is_merge_commit  = 0
                AND is_revert_commit = 0
              GROUP BY canonical_developer_id, commit_year
              ORDER BY commit_year ASC, value DESC',
-            [':branch' => $branch, ':from' => $from, ':to' => $to]
+            [':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to]
         );
     }
 
-    public function linesByMonth(string $branch, string $from, string $to): array
+    public function linesByMonth(string $project, string $branch, string $from, string $to): array
     {
         return Db::fetchAll(
             'SELECT
@@ -131,14 +136,15 @@ final class ReportRepository
                 commit_year_month             AS period,
                 COALESCE(SUM(lines_changed_total), 0) AS value
              FROM vw_commit_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND commit_date BETWEEN :from AND :to
                AND technical_commit = 0
                AND is_merge_commit  = 0
                AND is_revert_commit = 0
              GROUP BY canonical_developer_id, commit_year_month
              ORDER BY commit_year_month ASC, value DESC',
-            [':branch' => $branch, ':from' => $from, ':to' => $to]
+            [':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to]
         );
     }
 
@@ -146,7 +152,7 @@ final class ReportRepository
     // Reverts (affected developer = author of branch/ticket being reverted)
     // ------------------------------------------------------------------
 
-    public function revertsFullPeriod(string $branch, string $from, string $to, ?string $alias = null): array
+    public function revertsFullPeriod(string $project, string $branch, string $from, string $to, ?string $alias = null): array
     {
         [$aliasSql, $aliasParams] = $this->aliasFilterSql($alias);
 
@@ -156,16 +162,17 @@ final class ReportRepository
                 COALESCE(affected_author_display, "(невідомо)") AS dev_name,
                 COUNT(*)                        AS value
              FROM vw_revert_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND revert_date BETWEEN :from AND :to
                ' . $aliasSql . '
              GROUP BY affected_canonical_developer_id, dev_name
              ORDER BY value DESC, dev_name ASC',
-            array_merge([':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
+            array_merge([':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
         );
     }
 
-    public function revertsByYear(string $branch, string $from, string $to, ?string $alias = null): array
+    public function revertsByYear(string $project, string $branch, string $from, string $to, ?string $alias = null): array
     {
         [$aliasSql, $aliasParams] = $this->aliasFilterSql($alias);
 
@@ -176,16 +183,17 @@ final class ReportRepository
                 CAST(revert_year AS TEXT)       AS period,
                 COUNT(*)                        AS value
              FROM vw_revert_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND revert_date BETWEEN :from AND :to
                ' . $aliasSql . '
              GROUP BY affected_canonical_developer_id, dev_name, revert_year
              ORDER BY revert_year ASC, value DESC',
-            array_merge([':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
+            array_merge([':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
         );
     }
 
-    public function revertsByMonth(string $branch, string $from, string $to, ?string $alias = null): array
+    public function revertsByMonth(string $project, string $branch, string $from, string $to, ?string $alias = null): array
     {
         [$aliasSql, $aliasParams] = $this->aliasFilterSql($alias);
 
@@ -196,12 +204,13 @@ final class ReportRepository
                 revert_year_month               AS period,
                 COUNT(*)                        AS value
              FROM vw_revert_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND revert_date BETWEEN :from AND :to
                ' . $aliasSql . '
              GROUP BY affected_canonical_developer_id, dev_name, revert_year_month
              ORDER BY revert_year_month ASC, value DESC',
-            array_merge([':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
+            array_merge([':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
         );
     }
 
@@ -209,7 +218,7 @@ final class ReportRepository
      * List individual revert commits (used by --detail).
      * Returns rows: dev_id, dev_name, revert_date, commit_hash_short, subject, ticket_code.
      */
-    public function revertDetails(string $branch, string $from, string $to, ?string $alias = null): array
+    public function revertDetails(string $project, string $branch, string $from, string $to, ?string $alias = null): array
     {
         [$aliasSql, $aliasParams] = $this->aliasFilterSql($alias);
 
@@ -227,11 +236,12 @@ final class ReportRepository
                 COALESCE(matched_commit_subject, "") AS matched_commit_subject,
                 detected_by                          AS detected_by
              FROM vw_revert_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND revert_date BETWEEN :from AND :to
                ' . $aliasSql . '
              ORDER BY dev_name ASC, revert_datetime DESC',
-            array_merge([':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
+            array_merge([':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
         );
     }
 
@@ -275,7 +285,7 @@ final class ReportRepository
      *
      * @return array<int, array{dev_id:int, dev_name:string}>
      */
-    public function commitDevelopersInPeriod(string $branch, string $from, string $to, ?string $alias = null): array
+    public function commitDevelopersInPeriod(string $project, string $branch, string $from, string $to, ?string $alias = null): array
     {
         $aliasSql    = '';
         $aliasParams = [];
@@ -300,12 +310,13 @@ final class ReportRepository
                 canonical_developer_id                                AS dev_id,
                 COALESCE(canonical_author_display, author_display)    AS dev_name
              FROM vw_commit_facts
-             WHERE target_branch = :branch
+             WHERE project_name  = :project
+               AND target_branch = :branch
                AND commit_date BETWEEN :from AND :to
                ' . $aliasSql . '
              GROUP BY canonical_developer_id, dev_name
              ORDER BY dev_name ASC',
-            array_merge([':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
+            array_merge([':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to], $aliasParams)
         );
 
         return array_map(static fn(array $r): array => [
@@ -318,15 +329,16 @@ final class ReportRepository
     // Diagnostics
     // ------------------------------------------------------------------
 
-    public function commitsCountInPeriod(string $branch, string $from, string $to): int
+    public function commitsCountInPeriod(string $project, string $branch, string $from, string $to): int
     {
         $row = Db::fetchOne(
             'SELECT COUNT(*) AS cnt
              FROM commits c
              INNER JOIN import_runs ir ON ir.id = c.import_run_id
-             WHERE ir.target_branch = :branch
+             WHERE ir.project_name  = :project
+               AND ir.target_branch = :branch
                AND c.commit_date BETWEEN :from AND :to',
-            [':branch' => $branch, ':from' => $from, ':to' => $to]
+            [':project' => $project, ':branch' => $branch, ':from' => $from, ':to' => $to]
         );
         return (int) ($row['cnt'] ?? 0);
     }

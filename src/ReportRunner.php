@@ -47,7 +47,7 @@ final class ReportRunner
         $projectName = (string) $opts['project_name'];
 
         $this->ensureDbReady($applyAliases);
-        $this->ensureDataExists($branch, $from, $to);
+        $this->ensureDataExists($projectName, $branch, $from, $to);
 
         $outDir = $this->reportsRoot . '/' . $projectName . '/' . $this->dirNameFor($from, $to);
         if (!is_dir($outDir) && !mkdir($outDir, 0755, true) && !is_dir($outDir)) {
@@ -63,28 +63,23 @@ final class ReportRunner
             $isReverts   = str_starts_with($key, 'reverts-');
             $methodAlias = ($isReverts && $alias !== null) ? $alias : null;
 
-            // Pass $alias only to reverts-* methods (they accept the optional 4th arg).
             $rows = $isReverts
-                ? $this->repo->{$def['method']}($branch, $from, $to, $methodAlias)
-                : $this->repo->{$def['method']}($branch, $from, $to);
+                ? $this->repo->{$def['method']}($projectName, $branch, $from, $to, $methodAlias)
+                : $this->repo->{$def['method']}($projectName, $branch, $from, $to);
 
-            // For reverts-* — include all canonical developers who committed in
-            // the period (even with 0 reverts). They appear after data rows.
             $zeroDevs = $isReverts
-                ? $this->repo->commitDevelopersInPeriod($branch, $from, $to, $methodAlias)
+                ? $this->repo->commitDevelopersInPeriod($projectName, $branch, $from, $to, $methodAlias)
                 : [];
 
             $md = $this->builder->buildReport($def, $rows, $branch, $from, $to, 1, $zeroDevs);
 
-            // Inline Mermaid chart (always, when there is data).
             $mermaid = $this->mermaid->build($def, $rows);
             if ($mermaid !== '') {
                 $md .= $mermaid;
             }
 
-            // Append --detail section for reverts-* reports.
             if ($detail && $isReverts) {
-                $detailRows = $this->repo->revertDetails($branch, $from, $to, $methodAlias);
+                $detailRows = $this->repo->revertDetails($projectName, $branch, $from, $to, $methodAlias);
                 $md        .= $this->builder->buildRevertDetails($detailRows, $methodAlias);
                 Logger::info(sprintf('  detail: %d revert commits listed', count($detailRows)));
             }
@@ -203,9 +198,9 @@ final class ReportRunner
      * Hard-fail if no data exists for the (branch, period). This script never
      * imports from git — that is the job of bin/import.php.
      */
-    private function ensureDataExists(string $branch, string $from, string $to): void
+    private function ensureDataExists(string $project, string $branch, string $from, string $to): void
     {
-        $count = $this->repo->commitsCountInPeriod($branch, $from, $to);
+        $count = $this->repo->commitsCountInPeriod($project, $branch, $from, $to);
 
         if ($count > 0) {
             Logger::info("Commits in period: {$count}");
@@ -213,12 +208,12 @@ final class ReportRunner
         }
 
         throw new RuntimeException(sprintf(
-            "Неможливо створити звіт: у БД немає даних для branch=%s, period=%s..%s.\n" .
+            "Неможливо створити звіт: у БД немає даних для project=%s, branch=%s, period=%s..%s.\n" .
             "Цей скрипт не виконує імпорт з git. Спочатку імпортуйте дані:\n" .
-            "  php bin/import.php --branch=%s --date-from=%s --date-to=%s --fresh\n" .
+            "  php bin/import.php --project=%s --branch=%s --date-from=%s --date-to=%s --fresh\n" .
             "Після успішного імпорту повторіть запуск bin/report.php.",
-            $branch, $from, $to,
-            $branch, $from, $to
+            $project, $branch, $from, $to,
+            $project, $branch, $from, $to
         ));
     }
 

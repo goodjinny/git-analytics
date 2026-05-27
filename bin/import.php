@@ -333,11 +333,12 @@ $pipeline = new ImportPipeline(
 
 try {
     $pipeline->run([
-        'branch'    => $branch,
-        'date_from' => $dateFrom,
-        'date_to'   => $dateTo,
-        'repo_path' => $repoPath,
-        'dry_run'   => $dryRun,
+        'project_name' => $projectName,
+        'branch'       => $branch,
+        'date_from'    => $dateFrom,
+        'date_to'      => $dateTo,
+        'repo_path'    => $repoPath,
+        'dry_run'      => $dryRun,
     ]);
     exit(0);
 } catch (Throwable $e) {

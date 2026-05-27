@@ -73,7 +73,19 @@ class Db
         $pdo = self::getInstance();
         foreach ($statements as $stmt) {
             if ($stmt !== '') {
-                $pdo->exec($stmt);
+                try {
+                    $pdo->exec($stmt);
+                } catch (PDOException $e) {
+                    // Silently skip ALTER TABLE … ADD COLUMN when the column already exists.
+                    // This allows the migration statements at the bottom of the schema file
+                    // to be idempotent on existing databases.
+                    $isAddColumn = stripos($stmt, 'ALTER TABLE') !== false
+                        && stripos($stmt, 'ADD COLUMN') !== false;
+                    if ($isAddColumn && stripos($e->getMessage(), 'duplicate column name') !== false) {
+                        continue;
+                    }
+                    throw $e;
+                }
             }
         }
     }

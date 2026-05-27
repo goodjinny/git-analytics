@@ -14,6 +14,7 @@ PRAGMA journal_mode = WAL;
 
 CREATE TABLE IF NOT EXISTS import_runs (
     id                INTEGER  PRIMARY KEY AUTOINCREMENT,
+    project_name      TEXT     NOT NULL DEFAULT '',
     source_repo       TEXT     NOT NULL,
     target_branch     TEXT     NOT NULL,
     report_date_from  TEXT     NOT NULL,  -- YYYY-MM-DD
@@ -30,6 +31,12 @@ CREATE TABLE IF NOT EXISTS import_runs (
 
 CREATE INDEX IF NOT EXISTS idx_import_runs_branch_period
     ON import_runs(target_branch, report_date_from, report_date_to);
+
+CREATE INDEX IF NOT EXISTS idx_import_runs_project
+    ON import_runs(project_name);
+
+CREATE INDEX IF NOT EXISTS idx_import_runs_project_branch_period
+    ON import_runs(project_name, target_branch, report_date_from, report_date_to);
 
 CREATE INDEX IF NOT EXISTS idx_import_runs_status
     ON import_runs(status);
@@ -234,6 +241,7 @@ SELECT
     cd.author_email                AS canonical_author_email,
     cd.author_display              AS canonical_author_display,
     ir.id                          AS import_run_id,
+    ir.project_name,
     ir.target_branch,
     ir.report_date_from,
     ir.report_date_to
@@ -279,6 +287,7 @@ SELECT
     t.ticket_code,
     mc.commit_hash                AS matched_commit_hash,
     mc.subject                    AS matched_commit_subject,
+    ir.project_name,
     ir.target_branch,
     ir.report_date_from,
     ir.report_date_to
@@ -289,3 +298,9 @@ LEFT JOIN  developers  ad ON ad.id = r.affected_developer_id
 LEFT JOIN  tickets     t  ON t.id  = r.ticket_id
 LEFT JOIN  commits     mc ON mc.id = r.matched_commit_id;
 
+-- ============================================================================
+-- Migrations for existing databases
+-- (Db::initSchema silently skips these if the column already exists)
+-- ============================================================================
+
+ALTER TABLE import_runs ADD COLUMN project_name TEXT NOT NULL DEFAULT '';

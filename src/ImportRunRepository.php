@@ -9,6 +9,7 @@ class ImportRunRepository
      * Returns the new id.
      */
     public function create(
+        string $projectName,
         string $sourceRepo,
         string $branch,
         string $dateFrom,
@@ -16,14 +17,15 @@ class ImportRunRepository
     ): int {
         Db::execute(
             "INSERT INTO import_runs
-                (source_repo, target_branch, report_date_from, report_date_to, started_at, status, commits_found, reverts_found)
+                (project_name, source_repo, target_branch, report_date_from, report_date_to, started_at, status, commits_found, reverts_found)
              VALUES
-                (:repo, :branch, :from, :to, CURRENT_TIMESTAMP, 'running', 0, 0)",
+                (:project, :repo, :branch, :from, :to, CURRENT_TIMESTAMP, 'running', 0, 0)",
             [
-                ':repo'   => $sourceRepo,
-                ':branch' => $branch,
-                ':from'   => $dateFrom,
-                ':to'     => $dateTo,
+                ':project' => $projectName,
+                ':repo'    => $sourceRepo,
+                ':branch'  => $branch,
+                ':from'    => $dateFrom,
+                ':to'      => $dateTo,
             ]
         );
 

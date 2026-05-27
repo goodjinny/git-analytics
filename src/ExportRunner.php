@@ -53,7 +53,7 @@ final class ExportRunner
         $projectName = (string) $opts['project_name'];
 
         $this->ensureDbReady($applyAliases);
-        $this->ensureDataExists($branch, $from, $to);
+        $this->ensureDataExists($projectName, $branch, $from, $to);
 
         $exportDir = $this->reportsRoot . '/' . $projectName . '/' . $this->dirNameFor($from, $to) . '/exports';
         if (!is_dir($exportDir) && !mkdir($exportDir, 0755, true) && !is_dir($exportDir)) {
@@ -62,10 +62,8 @@ final class ExportRunner
 
         $keys = $this->resolveReports($reportKey);
 
-        // Build tables once — used by both CSV and XLSX outputs.
-        // Format: [ key => [ 'def' => $def, 'table' => $table ] ]
         $tables    = [];
-        $detailRow = null; // single shared revert-details table (if --detail)
+        $detailRow = null;
 
         foreach ($keys as $key) {
             $def       = ReportDefinitions::get($key);
@@ -73,11 +71,11 @@ final class ExportRunner
             $aliasArg  = ($isReverts && $alias !== null) ? $alias : null;
 
             $rows = $isReverts
-                ? $this->repo->{$def['method']}($branch, $from, $to, $aliasArg)
-                : $this->repo->{$def['method']}($branch, $from, $to);
+                ? $this->repo->{$def['method']}($projectName, $branch, $from, $to, $aliasArg)
+                : $this->repo->{$def['method']}($projectName, $branch, $from, $to);
 
             $zeroDevs = $isReverts
-                ? $this->repo->commitDevelopersInPeriod($branch, $from, $to, $aliasArg)
+                ? $this->repo->commitDevelopersInPeriod($projectName, $branch, $from, $to, $aliasArg)
                 : [];
 
             $tables[$key] = [
@@ -94,9 +92,8 @@ final class ExportRunner
             ));
         }
 
-        // Detail table (only built once; appended to CSV/XLSX as separate output).
         if ($detail) {
-            $detailRows = $this->repo->revertDetails($branch, $from, $to, $alias);
+            $detailRows = $this->repo->revertDetails($projectName, $branch, $from, $to, $alias);
             $detailRow  = $this->tableBuilder->buildRevertDetails($detailRows, $alias);
             Logger::info(sprintf('Prepared: revert-details (%d commits)', count($detailRows)));
         }
@@ -187,21 +184,21 @@ final class ExportRunner
         }
     }
 
-    private function ensureDataExists(string $branch, string $from, string $to): void
+    private function ensureDataExists(string $project, string $branch, string $from, string $to): void
     {
-        $count = $this->repo->commitsCountInPeriod($branch, $from, $to);
+        $count = $this->repo->commitsCountInPeriod($project, $branch, $from, $to);
         if ($count > 0) {
             Logger::info("Commits in period: {$count}");
             return;
         }
 
         throw new RuntimeException(sprintf(
-            "Неможливо створити експорт: у БД немає даних для branch=%s, period=%s..%s.\n" .
+            "Неможливо створити експорт: у БД немає даних для project=%s, branch=%s, period=%s..%s.\n" .
             "Цей скрипт не виконує імпорт з git. Спочатку імпортуйте дані:\n" .
-            "  php bin/import.php --branch=%s --date-from=%s --date-to=%s --fresh\n" .
+            "  php bin/import.php --project=%s --branch=%s --date-from=%s --date-to=%s --fresh\n" .
             "Після успішного імпорту повторіть запуск bin/export.php.",
-            $branch, $from, $to,
-            $branch, $from, $to
+            $project, $branch, $from, $to,
+            $project, $branch, $from, $to
         ));
     }
 

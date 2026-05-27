@@ -31,19 +31,21 @@ class ImportPipeline
      * Run the full import.
      *
      * $params keys:
-     *   branch    string
-     *   date_from string  YYYY-MM-DD
-     *   date_to   string  YYYY-MM-DD
-     *   repo_path string
-     *   dry_run   bool    optional — if true, no DB writes
+     *   project_name string  — key from git-projects config map
+     *   branch       string
+     *   date_from    string  YYYY-MM-DD
+     *   date_to      string  YYYY-MM-DD
+     *   repo_path    string
+     *   dry_run      bool    optional — if true, no DB writes
      */
     public function run(array $params): void
     {
-        $branch   = $params['branch'];
-        $dateFrom = $params['date_from'];
-        $dateTo   = $params['date_to'];
-        $repoPath = $params['repo_path'];
-        $dryRun   = (bool) ($params['dry_run'] ?? false);
+        $projectName = (string) ($params['project_name'] ?? '');
+        $branch      = $params['branch'];
+        $dateFrom    = $params['date_from'];
+        $dateTo      = $params['date_to'];
+        $repoPath    = $params['repo_path'];
+        $dryRun      = (bool) ($params['dry_run'] ?? false);
 
         $outputPath   = (string) Config::get('output.path');
         $importRunId  = 0;
@@ -52,7 +54,7 @@ class ImportPipeline
 
         // Step 1 — Create import_runs record
         if (!$dryRun) {
-            $importRunId = $this->importRunRepo->create($repoPath, $branch, $dateFrom, $dateTo);
+            $importRunId = $this->importRunRepo->create($projectName, $repoPath, $branch, $dateFrom, $dateTo);
             Logger::info("import_run_id: {$importRunId}");
         }
 
