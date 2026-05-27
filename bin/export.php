@@ -13,7 +13,7 @@ declare(strict_types=1);
  *   reports/dd.mm.YYYY-dd.mm.YYYY/exports/git-analytics.xlsx (--format=xlsx|both)
  *
  * Usage:
- *   php bin/export.php --date-from=2023-08-28 --date-to=2026-04-25
+ *   php bin/export.php --date-from=2026-01-01 --date-to=2026-04-25
  *   php bin/export.php --branch=master --date-from=… --date-to=… --format=xlsx
  *   php bin/export.php --branch=master --date-from=… --date-to=… --report=commits-full-period --format=csv
  *   php bin/export.php --help
@@ -121,7 +121,7 @@ Notes:
   - All exports honour developer aliases via vw_commit_facts / vw_revert_facts.
 
 Examples:
-  php bin/export.php --date-from=2023-08-28 --date-to=2026-04-25
+  php bin/export.php --date-from=2026-01-01 --date-to=2026-04-25
   php bin/export.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
       --report=reverts-by-month --detail --format=xlsx
   php bin/export.php --branch=master --date-from=2025-01-01 --date-to=2025-12-31 \

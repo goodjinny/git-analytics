@@ -5,8 +5,8 @@ declare(strict_types=1);
  * Git analytics — main CLI import entrypoint.
  *
  * Usage:
- *   php bin/import.php --date-from=2023-08-28 --date-to=2026-04-25
- *   php bin/import.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --dry-run
+ *   php bin/import.php --date-from=2026-01-01 --date-to=2026-04-25
+ *   php bin/import.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 --dry-run
  *   php bin/import.php --check-requirements
  *   php bin/import.php --help
  *
@@ -92,18 +92,18 @@ Optional:
 
 Examples:
   php bin/import.php \
-      --date-from=2023-08-28 \
+      --date-from=2026-01-01 \
       --date-to=2026-04-25
 
   php bin/import.php \
       --branch=master \
-      --date-from=2023-08-28 \
+      --date-from=2026-01-01 \
       --date-to=2026-04-25
 
   php bin/import.php \
       --project=awesome-project \
       --branch=master \
-      --date-from=2023-08-28 \
+      --date-from=2026-01-01 \
       --date-to=2026-04-25 \
       --fresh
 

@@ -152,6 +152,36 @@ php path-to-project/git-analytics/bin/import.php --check-requirements
 
 ---
 
+## Інсталяція
+
+1. Встановіть PHP та необхідні розширення:
+
+   ```bash
+   apt-get update && apt-get install -y php-cli php-sqlite3 php-mbstring php-zip
+   ```
+
+2. Клонуйте репозиторій:
+
+   ```bash
+   git clone https://github.com/goodjinny/git-analytics.git
+   ```
+
+3. Перейдіть у директорію проекту:
+
+   ```bash
+   cd git-analytics
+   ```
+
+4. Скопіюйте конфігураційний файл і відредагуйте його:
+
+   ```bash
+   cp config/config.example.php config/config.php
+   ```
+
+   Відкрийте `config/config.php` і вкажіть шляхи до ваших git-репозиторіїв у блоці `git-projects`.
+
+---
+
 ## Конфігурація
 
 Один файл — [config/config.php](config/config.php) (скопіюйте з [config/config.example.php](config/config.example.php) — реальний `config/config.php` у `.gitignore`):
@@ -191,13 +221,13 @@ cd test/git-analytics
 
 # 1. Імпорт даних (чистий старт, гілка визначається автоматично)
 php bin/import.php \
-    --date-from=2023-08-28 \
+    --date-from=2026-01-01 \
     --date-to=2026-04-25 \
     --fresh
 
 # 2. Згенерувати всі звіти (аліаси застосовуються автоматично)
 php bin/report.php \
-    --date-from=2023-08-28 \
+    --date-from=2026-01-01 \
     --date-to=2026-04-25
 ```
 
@@ -390,26 +420,26 @@ reports/<project_name>/dd.mm.YYYY-dd.mm.YYYY/exports/
 
 ```bash
 # Повний звіт за весь період (перший проект із config.php за замовч.)
-php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25
+php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25
 
 # Звіт для конкретного проекту
 php bin/report.php --project=awesome-project \
-    --branch=master --date-from=2023-08-28 --date-to=2026-04-25
+    --branch=master --date-from=2026-01-01 --date-to=2026-04-25
 
 # Повний звіт із включеними reverts-*
-php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 \
     --with-reverts-report
 
 # Окремий звіт із перезаписом
-php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 \
     --report=commits-full-period --force
 
 # Усі commits-* і lines-* окремими файлами + комбінований
-php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 \
     --report=all --force
 
 # Усі 9 звітів окремими файлами + комбінований (включаючи reverts-*)
-php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 \
     --report=all --with-reverts-report --force
 
 # Звіт по відкатах — генерується напряму без --with-reverts-report
@@ -425,11 +455,11 @@ php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \
     --report=reverts-full-period --detail
 
 # Без auto-aliasing
-php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 \
     --skip-aliases
 
 # Згенерувати markdown + інтерактивний HTML-дашборд
-php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 \
+php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 \
     --make-charts --force
 
 # Перевірити, що зробив би apply-aliases (без запису в БД)
@@ -439,11 +469,11 @@ php bin/apply-aliases.php --dry-run
 php bin/apply-aliases.php --project=my-project --dry-run
 
 # Експорт усіх 9 звітів у CSV + XLSX (default)
-php bin/export.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --force
+php bin/export.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 --force
 
 # Експорт для іншого проекту
 php bin/export.php --project=some-mvp \
-    --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --force
+    --branch=master --date-from=2026-01-01 --date-to=2026-04-25 --force
 
 # Лише XLSX за один звіт
 php bin/export.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \

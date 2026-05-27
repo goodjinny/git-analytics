@@ -17,7 +17,7 @@ declare(strict_types=1);
  * Output: test/git-analytics/reports/dd.mm.YYYY-dd.mm.YYYY/<key>.md
  *
  * Usage:
- *   php bin/report.php --branch=develop --date-from=2023-08-28 --date-to=2026-04-25
+ *   php bin/report.php --branch=develop --date-from=2026-01-01 --date-to=2026-04-25
  *   php bin/report.php --branch=develop --date-from=... --date-to=... --report=commits-full-period
  *   php bin/report.php --branch=develop --date-from=... --date-to=... --report=all
  *   php bin/report.php --help
@@ -160,10 +160,10 @@ Errors:
     with a message instructing you to run bin/import.php first.
 
 Examples:
-  php bin/report.php --date-from=2023-08-28 --date-to=2026-04-25
-  php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --report=commits-full-period
-  php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --report=all --force
-  php bin/report.php --branch=master --date-from=2023-08-28 --date-to=2026-04-25 --report=all --with-reverts-report --force
+  php bin/report.php --date-from=2026-01-01 --date-to=2026-04-25
+  php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 --report=commits-full-period
+  php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 --report=all --force
+  php bin/report.php --branch=master --date-from=2026-01-01 --date-to=2026-04-25 --report=all --with-reverts-report --force
   php bin/report.php --branch=master --date-from=2025-12-01 --date-to=2025-12-31 \\
       --report=reverts-by-month --detail --alias=jsmith
 
